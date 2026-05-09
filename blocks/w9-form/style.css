@@ -1,0 +1,20 @@
+/* W9 Form Block - Frontend Styles */
+.wp-block-w9-1099-chaser-w9-form {
+	margin: 20px 0;
+}
+
+/* Ensure form container is properly styled */
+.w9-form-container {
+	max-width: 100%;
+}
+
+/* Deduplication message */
+.w9-form-duplicate-notice {
+	background: #fef3c7;
+	border: 1px solid #f59e0b;
+	border-radius: 8px;
+	padding: 16px;
+	margin: 10px 0;
+	color: #92400e;
+	text-align: center;
+}

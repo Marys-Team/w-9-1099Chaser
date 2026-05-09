@@ -1,0 +1,57 @@
+.mypowerly-widget-block-editor {
+	padding: 20px;
+	background: #f9f9f9;
+	border: 2px dashed #ddd;
+	border-radius: 8px;
+	text-align: center;
+}
+
+.mypowerly-widget-block-preview {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 200px;
+}
+
+.mypowerly-widget-block-icon {
+	margin-bottom: 15px;
+}
+
+.mypowerly-widget-block-icon svg {
+	width: 48px;
+	height: 48px;
+	fill: #2271b1;
+}
+
+.mypowerly-widget-block-preview h3 {
+	margin: 0 0 10px;
+	font-size: 18px;
+	font-weight: 600;
+	color: #1e1e1e;
+}
+
+.mypowerly-widget-block-preview p {
+	margin: 0 0 15px;
+	color: #757575;
+	font-size: 14px;
+}
+
+.mypowerly-widget-block-notice {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px;
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	font-size: 13px;
+	color: #555;
+	max-width: 400px;
+	margin: 0 auto;
+}
+
+.mypowerly-widget-block-notice .dashicons {
+	color: #2271b1;
+	flex-shrink: 0;
+}

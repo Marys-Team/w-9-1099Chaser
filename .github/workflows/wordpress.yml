@@ -1,0 +1,109 @@
+name: Deploy to WordPress.org
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (example: 1.0.9)'
+        required: true
+        type: string
+
+jobs:
+
+  deploy-to-wordpress:
+    name: Deploy Plugin to WordPress.org
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version number
+        id: version
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="$INPUT_VERSION"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION=$(grep -i "^ \* Version:" w9-1099-chaser.php | head -1 | cut -d: -f2 | xargs)
+          fi
+          VERSION=$(echo "$VERSION" | tr -cd '0-9.')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Deploying version: $VERSION"
+
+      - name: Create and push tag
+        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            git tag "$TAG"
+            git push origin "$TAG"
+            echo "Tag $TAG created"
+          else
+            echo "Tag $TAG already exists, skipping"
+          fi
+
+      - name: Create ZIP
+        run: |
+          mkdir -p build-wp
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='build-wp' \
+            --exclude='build' \
+            --exclude='*.zip' \
+            ./ build-wp/
+          cd build-wp
+          zip -r ../w9-1099-chaser-${{ steps.version.outputs.version }}.zip .
+          echo "ZIP created"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: "v${{ steps.version.outputs.version }}"
+          body: |
+            ## Release v${{ steps.version.outputs.version }}
+            - ✅ WordPress.org build
+            - 🔗 https://wordpress.org/plugins/w9-1099-chaser/
+          files: w9-1099-chaser-${{ steps.version.outputs.version }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare build directory
+        run: |
+          mkdir -p build
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='build' \
+            --exclude='*.zip' \
+            ./ build/
+
+      - name: Deploy to WordPress.org
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        env:
+          SVN_USERNAME: ${{ secrets.WPORG_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.WPORG_PASSWORD }}
+          SLUG: w9-1099-chaser
+          BUILD_DIR: ./build
+          VERSION: ${{ steps.version.outputs.version }}
+
+      - name: Deployment success
+        run: |
+          echo "Plugin deployed to WordPress.org"
+          echo "View at: https://wordpress.org/plugins/w9-1099-chaser/"

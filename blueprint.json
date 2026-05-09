@@ -1,0 +1,15 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "preferredVersions": {
+    "php": "8.2",
+    "wp": "latest"
+  },
+  "login": true,
+  "plugins": [
+    {
+      "resource": "wordpress.org/plugins",
+      "slug": "w9-1099-chaser"
+    }
+  ],
+  "landingPage": "/wp-admin/plugins.php"
+}

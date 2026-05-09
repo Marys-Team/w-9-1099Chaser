@@ -1,0 +1,540 @@
+/* Admin-specific W-9 Form Styles */
+.mypowerly-w9-admin {
+    max-width: 1000px;
+    margin: 0;
+    padding: 20px;
+}
+
+.mypowerly-w9-admin h1 {
+    margin-bottom: 24px;
+    font-size: 28px;
+    color: #1e1e1e;
+}
+
+.mypowerly-w9-form-container {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+    margin-bottom: 20px;
+    border-radius: 4px;
+    padding: 25px;
+}
+
+.mypowerly-w9-form-header {
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #dcdcde;
+}
+
+.mypowerly-w9-form-header h2 {
+    margin: 0 0 10px 0;
+    font-size: 20px;
+    color: #1e1e1e;
+}
+
+.mypowerly-w9-form-header p {
+    margin: 0;
+    color: #646970;
+    font-size: 14px;
+}
+
+.mypowerly-w9-form-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.mypowerly-w9-form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.mypowerly-w9-form-section h3 {
+    margin: 0 0 20px 0;
+    font-size: 16px;
+    color: #1e1e1e;
+    font-weight: 600;
+}
+
+.mypowerly-w9-form-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.mypowerly-w9-form-row:last-child {
+    margin-bottom: 0;
+}
+
+.mypowerly-w9-form-group {
+    flex: 1;
+    min-width: 250px;
+    margin-bottom: 10px;
+}
+
+.mypowerly-w9-form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #1e1e1e;
+}
+
+.mypowerly-w9-form-group .description {
+    margin: 4px 0 0 0;
+    color: #646970;
+    font-style: italic;
+    font-size: 12px;
+}
+
+.mypowerly-w9-form-group input[type="text"],
+.mypowerly-w9-form-group input[type="date"],
+.mypowerly-w9-form-group select,
+.mypowerly-w9-form-group textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #8c8f94;
+    border-radius: 4px;
+    background: #fff;
+    color: #2c3338;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.mypowerly-w9-form-group input[type="text"]:focus,
+.mypowerly-w9-form-group input[type="date"]:focus,
+.mypowerly-w9-form-group select:focus,
+.mypowerly-w9-form-group textarea:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: 2px solid transparent;
+}
+
+.mypowerly-w9-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f1;
+}
+
+.mypowerly-w9-status {
+    font-size: 13px;
+    color: #646970;
+}
+
+.mypowerly-w9-status.success {
+    color: #00a32a;
+}
+
+.mypowerly-w9-status.error {
+    color: #d63638;
+}
+
+.mypowerly-w9-instructions {
+    background: #f6f7f7;
+    border-left: 4px solid #72aee6;
+    padding: 15px 20px;
+    margin-top: 30px;
+}
+
+.mypowerly-w9-instructions h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: #1e1e1e;
+}
+
+.mypowerly-w9-instructions p {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #2c3338;
+}
+
+.mypowerly-w9-instructions p:last-child {
+    margin-bottom: 0;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    .mypowerly-w9-form-row {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .mypowerly-w9-form-group {
+        width: 100%;
+        min-width: 100%;
+    }
+    
+    .mypowerly-w9-form-actions {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* Print styles */
+@media print {
+    .mypowerly-w9-admin {
+        padding: 0;
+    }
+    
+    .mypowerly-w9-form-container {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+    }
+    
+    .mypowerly-w9-form-actions,
+    .mypowerly-w9-instructions {
+        display: none;
+    }
+}
+
+/* Signature Pad Styles */
+.signature-pad {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    margin: 10px 0;
+    position: relative;
+}
+
+.signature-pad--body {
+    min-height: 200px;
+    width: 100%;
+    border: 1px solid #f0f0f1;
+    border-radius: 4px;
+    background: #f9f9f9;
+}
+
+.signature-pad--body canvas {
+    width: 100%;
+    height: 200px;
+    border-radius: 4px;
+}
+
+.signature-actions {
+    margin: 10px 0;
+    text-align: right;
+}
+
+.signature-actions .button {
+    margin-left: 8px;
+}
+
+/* Make it work on touch devices */
+@media (max-width: 768px) {
+    .signature-pad--body {
+        touch-action: none;
+    }
+}
+
+/* Shortcode Form Styles */
+.mypowerly-w9-form-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.mypowerly-w9-form-title {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #1e3a8a;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+.mypowerly-w9-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.mypowerly-w9-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mypowerly-w9-label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+}
+
+.mypowerly-w9-required {
+    color: #d63638;
+}
+
+.mypowerly-w9-input {
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: #fff;
+}
+
+.mypowerly-w9-input:focus {
+    outline: none;
+    border-color: #1e40af;
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+}
+
+.mypowerly-w9-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.mypowerly-w9-radio-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 12px;
+}
+
+.mypowerly-w9-radio {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.mypowerly-w9-radio input[type="radio"] {
+    margin: 0;
+}
+
+.mypowerly-w9-signature-container {
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    background: #f9fafb;
+}
+
+.mypowerly-w9-signature-canvas {
+    border: 2px dashed #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    cursor: crosshair;
+    display: block;
+    margin: 0 auto;
+    touch-action: none;
+}
+
+.mypowerly-w9-signature-actions {
+    margin-top: 12px;
+    text-align: right;
+}
+
+.mypowerly-w9-button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+}
+
+.mypowerly-w9-button-primary {
+    background: #1e40af;
+    color: white;
+}
+
+.mypowerly-w9-button-primary:hover {
+    background: #1e3a8a;
+}
+
+.mypowerly-w9-button-secondary {
+    background: #6b7280;
+    color: white;
+}
+
+.mypowerly-w9-button-secondary:hover {
+    background: #4b5563;
+}
+
+.mypowerly-w9-button-tertiary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.mypowerly-w9-button-tertiary:hover {
+    background: #e5e7eb;
+    border-color: #9ca3af;
+}
+
+.mypowerly-w9-button-small {
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+.mypowerly-w9-signature-help {
+    margin: 8px 0 0 0;
+    font-size: 12px;
+    color: #6b7280;
+    font-style: italic;
+    text-align: center;
+}
+
+.mypowerly-w9-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.mypowerly-w9-status {
+    margin-top: 20px;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.mypowerly-w9-status.success {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #10b981;
+}
+
+.mypowerly-w9-status.error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #ef4444;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .mypowerly-w9-form-wrapper {
+        padding: 16px;
+    }
+    
+    .mypowerly-w9-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .mypowerly-w9-actions {
+        flex-direction: column;
+    }
+    
+    .mypowerly-w9-signature-canvas {
+        width: 100%;
+        height: auto;
+    }
+}
+
+/* MyPowerly Button Styles */
+.mp-btn-primary {
+    background: linear-gradient(135deg, #1a56db 0%, #1e3a8a 100%) !important;
+    color: white !important;
+    font-weight: 600 !important;
+    padding: 10px 18px !important;
+    border-radius: 12px !important;
+    border: none !important;
+    transition: transform 0.18s ease, box-shadow 0.22s ease, filter 0.22s ease, background 0.22s ease !important;
+    box-shadow: 0 10px 26px rgba(26, 86, 219, 0.22) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    position: relative !important;
+    overflow: hidden !important;
+    text-decoration: none !important;
+    user-select: none !important;
+    cursor: pointer !important;
+}
+
+.mp-btn-primary:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 14px 34px rgba(26, 86, 219, 0.30) !important;
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e3a8a 100%) !important;
+}
+
+.mp-btn-primary:active {
+    transform: translateY(-1px) !important;
+    filter: brightness(0.98) !important;
+}
+
+.mp-btn-primary:disabled {
+    opacity: 0.62 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: 0 6px 14px rgba(26, 86, 219, 0.16) !important;
+    filter: grayscale(0.1) !important;
+}
+
+.mp-btn-secondary {
+    background: white !important;
+    color: #4b5563 !important;
+    font-weight: 600 !important;
+    padding: 10px 18px !important;
+    border-radius: 12px !important;
+    border: 1px solid #d1d5db !important;
+    transition: transform 0.18s ease, box-shadow 0.22s ease, border-color 0.22s ease, background 0.22s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    text-decoration: none !important;
+    user-select: none !important;
+    cursor: pointer !important;
+}
+
+.mp-btn-secondary:hover {
+    background: #f3f4f6 !important;
+    border-color: #9ca3af !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08) !important;
+}
+
+.mp-btn-secondary:active {
+    transform: translateY(0px) !important;
+}
+
+.mp-btn-secondary:disabled {
+    opacity: 0.70 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+/* Hide page navigation/breadcrumb elements on pages containing W-9 form */
+body .w9-form-container ~ .woocommerce-breadcrumb,
+body .w9-form-container ~ .breadcrumb,
+body .w9-form-container ~ .site-header .main-navigation,
+body .w9-form-container ~ .entry-header,
+body .w9-form-container ~ .page-header,
+body .w9-form-container ~ .woocommerce-breadcrumb,
+.w9-form-container + .woocommerce-breadcrumb,
+.w9-form-container + .breadcrumb,
+.w9-form-container + .entry-header,
+.w9-form-container + .page-header {
+    display: none !important;
+}
+
+/* Hide WooCommerce breadcrumbs specifically on W-9 form pages */
+.woocommerce-page .w9-form-container ~ .woocommerce-breadcrumb,
+.woocommerce-page .w9-form-container + .woocommerce-breadcrumb {
+    display: none !important;
+}
+
+/* Hide page title on pages with W-9 form */
+.w9-form-container ~ .entry-title,
+.w9-form-container ~ .page-title,
+.w9-form-container ~ h1.entry-title {
+    display: none !important;
+}

@@ -1,0 +1,57 @@
+/* W9 Form Block - Editor Styles */
+.w9-form-block-editor {
+	padding: 20px;
+	background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+	border: 2px dashed #3b82f6;
+	border-radius: 12px;
+}
+
+.w9-form-block-preview {
+	text-align: center;
+	padding: 30px;
+}
+
+.w9-form-block-icon {
+	width: 64px;
+	height: 64px;
+	background: linear-gradient(135deg, #2563eb, #4f46e5);
+	border-radius: 16px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0 auto 20px;
+}
+
+.w9-form-block-icon svg {
+	width: 32px;
+	height: 32px;
+	fill: white;
+}
+
+.w9-form-block-preview h3 {
+	margin: 0 0 10px;
+	font-size: 20px;
+	color: #1e293b;
+}
+
+.w9-form-block-preview p {
+	margin: 0 0 20px;
+	color: #64748b;
+	font-size: 14px;
+}
+
+.w9-form-block-notice {
+	background: #fef3c7;
+	border: 1px solid #f59e0b;
+	border-radius: 8px;
+	padding: 12px 16px;
+	font-size: 13px;
+	color: #92400e;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.w9-form-block-notice .dashicons {
+	color: #f59e0b;
+}
