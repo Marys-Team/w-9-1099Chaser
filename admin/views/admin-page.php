@@ -1572,24 +1572,7 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 				</div>
 			</div>
 		<?php endif; ?>
-					<div class="p-6">
-						<div class="flex items-start gap-4">
-							<div class="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
-								<i class="fas fa-triangle-exclamation text-2xl text-red-600"></i>
-							</div>
-							<div class="flex-1">
-								<h3 class="text-xl font-bold text-gray-800 mb-2">Connection Failed</h3>
-								<div class="mb-6">
-									<p class="text-gray-700"><span class="font-semibold">Error:</span> <?php echo esc_html( $connection_error ); ?></p>
-													<i class="fas fa-id-card text-pink-600 icon-tooltip" data-tooltip="Sync all membership plugins"></i>
-												</div>
-												<div>
-													<div class="font-semibold text-gray-800">Memberships</div>
-													<div class="step-status step-pending">Pending</div>
-												</div>
-											</div>
-											<div class="text-xs text-gray-600">All membership data</div>
-										</div>
+
 
 										<div class="sync-step p-3 bg-gray-50 rounded-xl" data-step="contractor">
 											<div class="flex items-center gap-3 mb-2">
