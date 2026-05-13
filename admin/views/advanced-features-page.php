@@ -13,6 +13,7 @@ $site_url          = get_option( 'w91099ch_site_url', '' );
 $user_email        = get_option( 'w91099ch_user_email', '' );
 
 $mp_connected = (bool) ( $is_connected && ! empty( $credentials ) );
+$has_admin_consent = false; // Force unchecked by default for ecommerce consent
 
 $current_user     = wp_get_current_user();
 $users_count_data = count_users();
@@ -1621,10 +1622,18 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 										Disconnect
 									</button>
 								<?php endif; ?>
-								<a href="https://mypowerly.com" target="_blank" rel="noopener noreferrer" class="mp-btn-primary mp-hero-action">
-									<i class="fas fa-up-right-from-square" aria-hidden="true"></i>
-									Go to MyPowerly
-								</a>
+								<?php if ( $is_connected && ! empty( $credentials ) ) : ?>
+									<a href="https://mypowerly.com" target="_blank" rel="noopener noreferrer" class="mp-btn-primary mp-hero-action">
+										<i class="fas fa-up-right-from-square" aria-hidden="true"></i>
+										Go to MyPowerly
+									</a>
+								<?php else : ?>
+									<button type="button" class="mp-btn-primary mp-hero-action" id="mp-hero-scroll-connect"
+										onclick="(function(){var t=document.getElementById('mypowerly-connect-block')||document.getElementById('connect-mypowerly-cta');if(t){t.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(function(){var b=document.getElementById('connect-mypowerly-cta');if(b){b.classList.add('mp-connect-highlight');setTimeout(function(){b.classList.remove('mp-connect-highlight');},2000);}},600);}})();">
+										<i class="fas fa-plug" aria-hidden="true"></i>
+										Connect to Mypowerly
+									</button>
+								<?php endif; ?>
 							</div>
 						</div>
 					</div>
@@ -2039,7 +2048,7 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 			</div>
 
 			<!-- Sync Cards Grid - Three Cards Per Row -->
-			<div class="mp-cards-grid grid grid-cols-1 md:grid-cols-3 gap-6">
+			<div class="mp-cards-grid grid grid-cols-1 md:grid-cols-3 gap-6 <?php echo ( ! $mp_connected ) ? 'mp-cards-disabled' : ''; ?>">
 
 				<!-- Card 1: User Profile -->
 				<div class="mp-card mp-metric-card mp-metric-blue p-4 flex flex-col h-full">
@@ -3421,7 +3430,7 @@ $wp_detector         = new w91099ch_Wallet_Payout_Plugin_Detector();
 
 						<div class="space-y-3 mt-auto">
 							<div class="p-3 bg-yellow-50 rounded-lg border border-yellow-200 flex items-start gap-3">
-								<input type="checkbox" id="ecommerce-consent" class="mt-1 h-4 w-4 text-yellow-600 border-gray-300 rounded" />
+								<input type="checkbox" id="ecommerce-consent" class="mt-1 h-4 w-4 text-yellow-600 border-gray-300 rounded" <?php checked( $has_admin_consent ); ?> />
 								<div class="flex-1 text-sm text-gray-700">
 									<p class="font-semibold text-gray-900">Consent required</p>
 									<p class="text-gray-700">I consent to sending ecommerce platform info to Mypowerly.</p>
@@ -3642,6 +3651,19 @@ jQuery(document).ready(function($) {
 		setTimeout(() => $toast.fadeOut(200), 3000);
 	}
 
+	function updateCardsDisabledState(isConnected) {
+		const $cardsGrid = $('.mp-cards-grid');
+		if (!$cardsGrid.length) {
+			return;
+		}
+
+		if (isConnected) {
+			$cardsGrid.removeClass('mp-cards-disabled');
+		} else {
+			$cardsGrid.addClass('mp-cards-disabled');
+		}
+	}
+
 	// Auto Sync toggle handled in assets/js/w9-1099-chaser-admin-page-inline.js
 
 	(function initMypowerlyOptIn() {
@@ -3652,6 +3674,9 @@ jQuery(document).ready(function($) {
 			return attr === '1' || attr === 'true';
 		};
 		const isConnected = getConnectedFromDom();
+
+		// Update cards disabled state based on connection status
+		updateCardsDisabledState(isConnected);
 
 		const disableAdvancedControls = function() {
 			if (!$dataSyncSection.length) {
@@ -3778,15 +3803,19 @@ jQuery(document).ready(function($) {
 		return window.confirm('Are you sure you want to send ' + label + ' to Mypowerly?');
 	}
 
-	function setupConsentGate(checkboxSelector, buttonSelector) {
+	function setupConsentGate(checkboxSelector, buttonSelector, statusSelector) {
 		const $cb = $(checkboxSelector);
 		const $btn = $(buttonSelector);
+		const $status = statusSelector ? $(statusSelector) : null;
 		if (!$btn.length) return;
 
 		const apply = function() {
 			const ok = $cb.length && $cb.is(':checked');
 			$btn.prop('disabled', !ok);
 			$btn.toggleClass('opacity-60 cursor-not-allowed', !ok);
+			if ($status && $status.length) {
+				$status.text(ok ? 'Ready to sync' : 'Check consent to enable sync');
+			}
 		};
 
 		apply();
@@ -3815,14 +3844,86 @@ jQuery(document).ready(function($) {
 	setupConsentGate('#freelancer-contractor-consent', '#sync-freelancer-contractor-btn');
 	setupConsentGate('#accounting-bookkeeping-consent', '#sync-accounting-bookkeeping-btn');
 	setupConsentGate('#contractor-consent', '#sync-contractor-btn');
-	setupConsentGate('#ecommerce-consent', '#sync-ecommerce-btn');
+	setupConsentGate('#ecommerce-consent', '#sync-ecommerce-btn', '#ecommerce-sync-status');
 
-	$('#sync-ecommerce-btn').off('click.syncEcommerce').on('click.syncEcommerce', function() {
-		if (!$('#ecommerce-consent').is(':checked')) {
-			window.alert('Please check the consent checkbox to enable sending ecommerce data to the external service.');
+	// Additional explicit handler for ecommerce consent to ensure it works
+	$('#ecommerce-consent').off('change.ecommerceExplicit').on('change.ecommerceExplicit', function() {
+		const $btn = $('#sync-ecommerce-btn');
+		const $status = $('#ecommerce-sync-status');
+		if ($(this).is(':checked')) {
+			$btn.prop('disabled', false);
+			$btn.removeAttr('disabled');
+			$btn.removeClass('opacity-60 cursor-not-allowed');
+			$status.text('Ready');
+		} else {
+			$btn.prop('disabled', true);
+			$btn.attr('disabled', 'disabled');
+			$btn.addClass('opacity-60 cursor-not-allowed');
+			$status.text('Check consent to enable sync');
+		}
+	});
+
+	// Initialize ecommerce button state based on checkbox
+	if ($('#ecommerce-consent').is(':checked')) {
+		$('#sync-ecommerce-btn').prop('disabled', false);
+		$('#sync-ecommerce-btn').removeAttr('disabled');
+		$('#sync-ecommerce-btn').removeClass('opacity-60 cursor-not-allowed');
+		$('#ecommerce-sync-status').text('Ready');
+	}
+
+	window.handleSyncEcommerceClick = function(btn) {
+		const $button = jQuery(btn);
+		const $status = jQuery('#ecommerce-sync-status');
+		
+		if (!window.confirm('Are you sure you want to send ecommerce platform data to Mypowerly?')) {
 			return;
 		}
+
+		if (!window.w91099chConnector || !window.w91099chConnector.ajaxurl) {
+			window.alert('Connector configuration missing (ajaxurl). Please reload the page.');
+			return;
+		}
+
+		$button.prop('disabled', true);
+		$status.text('Syncing...');
+
+		jQuery.ajax({
+			url: window.w91099chConnector.ajaxurl,
+			type: 'POST',
+			data: {
+				action: 'w91099ch_sync_ecommerce_data',
+				nonce: window.w91099chConnector.nonce
+			},
+			success: function(response) {
+				if (response && response.success) {
+					$status.text('Ready');
+					window.alert('✅ Ecommerce data synced successfully via webhook!');
+				} else {
+					const msg = (response && response.data) ? (response.data.message || response.data) : 'Ecommerce sync failed';
+					$status.text('Error');
+					window.alert('❌ ' + msg);
+				}
+			},
+			error: function(xhr, status, error) {
+				$status.text('Error');
+				window.alert('❌ Ecommerce sync error: ' + error);
+			},
+			complete: function() {
+				$button.prop('disabled', false);
+			}
+		});
+	};
+
+	$('#sync-ecommerce-btn').off('click.syncEcommerce').on('click.syncEcommerce', function() {
 		if (!confirmSendToMypowerly('ecommerce platform data')) {
+			return;
+		}
+		if (!window.w91099chConnector || !window.w91099chConnector.ajaxurl) {
+			window.alert('Connector configuration missing (ajaxurl). Please reload the page.');
+			return;
+		}
+		if (!window.w91099chConnector.nonce) {
+			window.alert('Security nonce missing. Please reload the page.');
 			return;
 		}
 

@@ -719,6 +719,7 @@ startxref
 		add_action( 'admin_post_w91099ch_revoke_consent', array( $this, 'handle_revoke_consent' ) );
 
 		add_action( 'wp_ajax_w91099ch_set_admin_consent', array( $this, 'ajax_set_admin_consent' ) );
+		add_action( 'wp_ajax_w91099ch_save_auto_sync_on_connect', array( $this, 'ajax_save_auto_sync_on_connect' ) );
 
 		// AJAX
 		add_action( 'wp_ajax_w91099ch_submit_feedback', array( $this, 'ajax_submit_feedback' ) );
@@ -1557,6 +1558,7 @@ startxref
 		if ( $connection_success ) {
 			delete_transient( 'w91099ch_connection_success' );
 		}
+		delete_transient( 'w91099ch_pending_auto_sync' );
 	}
 
 	public function render_dashboard_page() {
@@ -1575,6 +1577,7 @@ startxref
 		if ( $connection_success ) {
 			delete_transient( 'w91099ch_connection_success' );
 		}
+		delete_transient( 'w91099ch_pending_auto_sync' );
 	}
 
 	/**
@@ -1768,8 +1771,8 @@ startxref
 							if ( '' === $pkey ) {
 								continue;
 							}
-							$enabled_raw = filter_input( INPUT_POST, 'w91099ch_ecom_enabled_' . $pkey, FILTER_SANITIZE_FULL_SPECIAL_CHARS );
-							$enabled     = ( '1' === $enabled_raw );
+							// Always treat platforms as enabled (checkbox removed)
+							$enabled    = true;
 							$fields_in   = filter_input( INPUT_POST, 'w91099ch_ecom_fields_' . $pkey, FILTER_DEFAULT, FILTER_REQUIRE_ARRAY );
 							$fields_in   = is_array( $fields_in ) ? array_map( 'sanitize_key', $fields_in ) : array();
 							$allowed     = isset( $allowed_fields_map[ $pkey ] ) ? (array) $allowed_fields_map[ $pkey ] : array();
@@ -2571,10 +2574,9 @@ startxref
 										<?php foreach ( $ecom_plugins as $pkey => $meta ) : ?>
 											<?php
 												$curr = isset( $ecom_settings[ $pkey ] ) && is_array( $ecom_settings[ $pkey ] ) ? $ecom_settings[ $pkey ] : array();
-												$enabled = isset( $curr['enabled'] ) ? (bool) $curr['enabled'] : false;
 												$fields  = ( isset( $curr['fields'] ) && is_array( $curr['fields'] ) ) ? $curr['fields'] : array();
 											?>
-											<details class="mp-card p-5" <?php echo $enabled ? 'open' : ''; ?> style="border: 1px solid var(--mp-gray-200);">
+											<details class="mp-card p-5" style="border: 1px solid var(--mp-gray-200);">
 												<summary class="flex items-center justify-between gap-4" style="cursor: pointer; list-style: none;">
 													<div class="flex items-center gap-3">
 														<div class="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
@@ -2589,10 +2591,6 @@ startxref
 															</div>
 														</div>
 													</div>
-													<label class="flex items-center gap-2" style="margin: 0;">
-														<input type="checkbox" name="w91099ch_ecom_enabled_<?php echo esc_attr( $pkey ); ?>" value="1" <?php checked( $enabled ); ?> />
-														<span class="text-sm font-semibold text-gray-800"><?php echo esc_html__( 'Enable', 'w9-1099-chaser' ); ?></span>
-													</label>
 												</summary>
 												<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
 													<?php foreach ( (array) $meta['fields'] as $fname => $flabel ) : ?>
@@ -3335,6 +3333,8 @@ startxref
 				'payment_limit_amount' => get_option( 'w91099ch_payment_limit_amount', '0' ),
 				'newsletter_subscribed' => $newsletter_subscribed,
 				'newsletter_subscribe_nonce' => wp_create_nonce( 'w91099ch_newsletter_subscribe' ),
+				'auto_sync_on_connect'  => (bool) get_option( 'w91099ch_auto_sync_on_connect', false ),
+				'pending_auto_sync'     => (bool) get_transient( 'w91099ch_pending_auto_sync' ),
 			)
 		);
 	}
@@ -3630,6 +3630,21 @@ startxref
 
 		update_option( 'w91099ch_admin_consent', 1 );
 		wp_send_json_success( array( 'message' => esc_html__( 'Consent saved', 'w9-1099-chaser' ) ) );
+	}
+
+	/**
+	 * Save the "auto sync all data after connection" preference.
+	 */
+	public function ajax_save_auto_sync_on_connect() {
+		check_ajax_referer( 'w91099ch_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( esc_html__( 'Insufficient permissions', 'w9-1099-chaser' ) );
+		}
+
+		$enabled = filter_input( INPUT_POST, 'enabled', FILTER_VALIDATE_BOOLEAN );
+		update_option( 'w91099ch_auto_sync_on_connect', (bool) $enabled );
+		wp_send_json_success( array( 'auto_sync_on_connect' => (bool) $enabled ) );
 	}
 
 	/**
@@ -4130,6 +4145,7 @@ startxref
 		if ( $connection_success ) {
 			delete_transient( 'w91099ch_connection_success' );
 		}
+		delete_transient( 'w91099ch_pending_auto_sync' );
 	}
 
 	public function get_connection_status() {

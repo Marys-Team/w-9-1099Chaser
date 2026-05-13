@@ -73,7 +73,8 @@ try {
 			'includes/contractor-plugin-detector-init.php',
 			'includes/freelancer-contractor-plugin-detector-init.php',
 			'includes/accounting-bookkeeping-plugin-detector-init.php',
-			'includes/wallet-payout-plugin-detector-init.php'
+			'includes/wallet-payout-plugin-detector-init.php',
+			'includes/ecommerce-plugin-detector-init.php'
 		];
 
 		foreach ($detector_inits as $init_file) {
@@ -89,7 +90,8 @@ try {
 		'includes/contractor-plugin-ajax-handlers.php',
 		'includes/freelancer-contractor-plugin-ajax-handlers.php',
 		'includes/accounting-bookkeeping-plugin-ajax-handlers.php',
-		'includes/wallet-payout-plugin-ajax-handlers.php'
+		'includes/wallet-payout-plugin-ajax-handlers.php',
+		'includes/ecommerce-plugin-ajax-handlers.php'
 	];
 
 	foreach ($ajax_handlers as $handler_file) {
@@ -184,6 +186,11 @@ class w91099ch_Plugin {
 					$this->core->store_connection_data( $credentials );
 					set_transient( 'w91099ch_connection_success', true, 300 );
 
+					// If the user opted in to auto-sync, flag it for the next page load.
+					if ( get_option( 'w91099ch_auto_sync_on_connect', false ) ) {
+						set_transient( 'w91099ch_pending_auto_sync', true, 300 );
+					}
+
 					$redirect_url = admin_url( 'admin.php?page=w91099ch&status=success' );
 					wp_safe_redirect( $redirect_url );
 					exit;
@@ -277,6 +284,11 @@ class w91099ch_Plugin {
 			if ( $credentials ) {
 				$this->core->store_connection_data( $credentials );
 				set_transient( 'w91099ch_connection_success', true, 300 );
+
+				// If the user opted in to auto-sync, flag it for the next page load.
+				if ( get_option( 'w91099ch_auto_sync_on_connect', false ) ) {
+					set_transient( 'w91099ch_pending_auto_sync', true, 300 );
+				}
 
 				$redirect_url = admin_url( 'admin.php?page=w91099ch&status=success' );
 				wp_safe_redirect( $redirect_url );
@@ -409,7 +421,7 @@ try {
 
 	function w9_1099_chaser_render_header_support( $status = 'disconnected' ) {
 		if ( $status === 'disconnected' ) {
-			echo '<a href="https://mypowerly.com" class="mp-btn-secondary" style="font-size: 14px;" target="_blank" rel="noopener noreferrer">Go to MyPowerly</a>';
+			echo '<button type="button" id="mp-hero-goto-connect" class="mp-btn-secondary" style="font-size: 14px;" onclick="(function(){var t=document.getElementById(\'mypowerly-connect-block\')||document.getElementById(\'connect-mypowerly-cta\');if(t){t.scrollIntoView({behavior:\'smooth\',block:\'center\'});setTimeout(function(){var b=document.getElementById(\'connect-mypowerly-cta\');if(b){b.classList.add(\'mp-connect-highlight\');setTimeout(function(){b.classList.remove(\'mp-connect-highlight\');},2000);}},600);}})();">Connect to Mypowerly</button>';
 		} else {
 			echo '<span class="support-status">Support Available</span>';
 		}

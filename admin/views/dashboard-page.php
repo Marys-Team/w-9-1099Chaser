@@ -612,6 +612,11 @@ $w9_default_page_url     = $w9_default_page_id ? (string) get_permalink( $w9_def
 							<span class="text-sm text-gray-700">I understand that connecting will securely sync and store My WordPress data in Mypowerly to unlock additional features.</span>
 						</label>
 
+						<label class="flex items-start gap-3 cursor-pointer mt-3">
+							<input type="checkbox" id="mypowerly-auto-sync-on-connect" class="mt-1" <?php checked( get_option( 'w91099ch_auto_sync_on_connect', false ) ); ?> />
+							<span class="text-sm text-gray-700">Automatically sync all data to Mypowerly right after connecting.</span>
+						</label>
+
 						<div class="mt-4">
 							<div class="text-sm font-semibold text-gray-800 mb-2">Discount Code (optional)</div>
 							<div class="flex items-center gap-3">
@@ -655,6 +660,21 @@ jQuery(document).ready(function($) {
 			enableSecureW9: <?php echo wp_json_encode( get_option( 'w91099ch_enable_secure_w9', false ) ); ?>,
 		};
 	}
+
+	// Save auto-sync-on-connect preference when the checkbox is toggled.
+	$('#mypowerly-auto-sync-on-connect').off('change.autoSyncSave').on('change.autoSyncSave', function() {
+		var checked = this.checked;
+		if (!window.w91099chConnector || !window.w91099chConnector.ajaxurl) return;
+		$.ajax({
+			url: window.w91099chConnector.ajaxurl,
+			type: 'POST',
+			data: {
+				action: 'w91099ch_save_auto_sync_on_connect',
+				nonce: window.w91099chConnector.nonce,
+				enabled: checked ? '1' : '0'
+			}
+		});
+	});
 });
 </script>
 

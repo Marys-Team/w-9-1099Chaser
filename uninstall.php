@@ -68,6 +68,7 @@ $w91099ch_cleanup_for_blog = static function () use ( $wpdb, $w91099ch_option_ke
 	delete_transient( 'w91099ch_connection_error' );
 	delete_transient( 'w91099ch_connection_success' );
 	delete_transient( 'w91099ch_activated' );
+	delete_transient( 'w91099ch_pending_auto_sync' );
 
 	// Clear per-user transients that use dynamic keys.
 	$user_ids = get_users(

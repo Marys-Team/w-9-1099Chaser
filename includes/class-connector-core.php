@@ -542,6 +542,498 @@ class w91099ch_Core {
 		);
 	}
 
+	private function get_ecommerce_sync_defaults() {
+		$limit_raw = get_option( 'w91099ch_ecommerce_sync_limit', 20 );
+		$limit     = is_numeric( $limit_raw ) ? absint( $limit_raw ) : 20;
+		if ( $limit <= 0 ) {
+			$limit = 20;
+		}
+		if ( $limit > 200 ) {
+			$limit = 200;
+		}
+
+		$days_raw = get_option( 'w91099ch_ecommerce_sync_days', 30 );
+		$days     = is_numeric( $days_raw ) ? absint( $days_raw ) : 30;
+		if ( $days <= 0 ) {
+			$days = 30;
+		}
+		if ( $days > 365 ) {
+			$days = 365;
+		}
+
+		return array(
+			'limit' => $limit,
+			'days'  => $days,
+		);
+	}
+
+	private function collect_ecommerce_datasets( $plugin_slug, $selected_fields, $defaults ) {
+		$plugin_slug     = sanitize_key( (string) $plugin_slug );
+		$selected_fields = is_array( $selected_fields ) ? array_map( 'sanitize_key', $selected_fields ) : array();
+		$defaults        = is_array( $defaults ) ? $defaults : array();
+
+		$limit = isset( $defaults['limit'] ) ? absint( $defaults['limit'] ) : 20;
+		$days  = isset( $defaults['days'] ) ? absint( $defaults['days'] ) : 30;
+		if ( $limit <= 0 ) {
+			$limit = 20;
+		}
+		if ( $days <= 0 ) {
+			$days = 30;
+		}
+
+		$out = array(
+			'data'   => array(),
+			'counts' => array(),
+			'errors' => array(),
+		);
+
+		$fields_lookup = array_fill_keys( $selected_fields, true );
+		$has_field = static function( $key ) use ( $fields_lookup ) {
+			$key = sanitize_key( (string) $key );
+			return isset( $fields_lookup[ $key ] );
+		};
+
+		try {
+			if ( 'woocommerce' === $plugin_slug ) {
+				if ( $has_field( 'orders' ) ) {
+					$out['data']['orders'] = $this->collect_wc_orders( $limit, $days, array(), false );
+					$out['counts']['orders'] = is_array( $out['data']['orders'] ) ? count( $out['data']['orders'] ) : 0;
+				}
+				if ( $has_field( 'customers' ) ) {
+					$out['data']['customers'] = $this->collect_wc_customers( $limit );
+					$out['counts']['customers'] = is_array( $out['data']['customers'] ) ? count( $out['data']['customers'] ) : 0;
+				}
+				if ( $has_field( 'products' ) ) {
+					$out['data']['products'] = $this->collect_wc_products( $limit );
+					$out['counts']['products'] = is_array( $out['data']['products'] ) ? count( $out['data']['products'] ) : 0;
+				}
+				if ( $has_field( 'refunds' ) ) {
+					$out['data']['refunds'] = $this->collect_wc_refunds( $limit, $days );
+					$out['counts']['refunds'] = is_array( $out['data']['refunds'] ) ? count( $out['data']['refunds'] ) : 0;
+				}
+				if ( $has_field( 'payments' ) ) {
+					$out['data']['payments'] = $this->collect_wc_payments( $limit, $days, array() );
+					$out['counts']['payments'] = is_array( $out['data']['payments'] ) ? count( $out['data']['payments'] ) : 0;
+				}
+				if ( $has_field( 'coupons' ) ) {
+					$out['data']['coupons'] = $this->collect_wc_coupons( $limit );
+					$out['counts']['coupons'] = is_array( $out['data']['coupons'] ) ? count( $out['data']['coupons'] ) : 0;
+				}
+				if ( $has_field( 'subscriptions' ) ) {
+					$out['data']['subscriptions'] = $this->collect_wc_subscriptions( $limit, $days, $out['errors'] );
+					$out['counts']['subscriptions'] = is_array( $out['data']['subscriptions'] ) ? count( $out['data']['subscriptions'] ) : 0;
+				}
+				if ( $has_field( 'vendors' ) ) {
+					$out['data']['vendors'] = $this->collect_marketplace_vendors( array( 'seller', 'vendor' ), $limit );
+					$out['counts']['vendors'] = is_array( $out['data']['vendors'] ) ? count( $out['data']['vendors'] ) : 0;
+				}
+				if ( $has_field( 'payouts' ) ) {
+					$out['data']['payouts'] = array();
+					$out['counts']['payouts'] = 0;
+				}
+				return $out;
+			}
+
+			if ( 'dokan' === $plugin_slug ) {
+				if ( $has_field( 'vendors' ) ) {
+					$out['data']['vendors'] = $this->collect_marketplace_vendors( array( 'seller', 'dokan_vendor', 'vendor' ), $limit );
+					$out['counts']['vendors'] = is_array( $out['data']['vendors'] ) ? count( $out['data']['vendors'] ) : 0;
+				}
+				if ( $has_field( 'orders' ) ) {
+					$out['data']['orders'] = $this->collect_wc_orders( $limit, $days, array(), false );
+					$out['counts']['orders'] = is_array( $out['data']['orders'] ) ? count( $out['data']['orders'] ) : 0;
+				}
+				if ( $has_field( 'customers' ) ) {
+					$out['data']['customers'] = $this->collect_wc_customers( $limit );
+					$out['counts']['customers'] = is_array( $out['data']['customers'] ) ? count( $out['data']['customers'] ) : 0;
+				}
+				if ( $has_field( 'products' ) ) {
+					$out['data']['products'] = $this->collect_wc_products( $limit );
+					$out['counts']['products'] = is_array( $out['data']['products'] ) ? count( $out['data']['products'] ) : 0;
+				}
+				if ( $has_field( 'refunds' ) ) {
+					$out['data']['refunds'] = $this->collect_wc_refunds( $limit, $days );
+					$out['counts']['refunds'] = is_array( $out['data']['refunds'] ) ? count( $out['data']['refunds'] ) : 0;
+				}
+				if ( $has_field( 'payouts' ) ) {
+					$out['data']['payouts'] = $this->collect_marketplace_payouts( 'dokan', $limit, $days, $out['errors'] );
+					$out['counts']['payouts'] = is_array( $out['data']['payouts'] ) ? count( $out['data']['payouts'] ) : 0;
+				}
+				return $out;
+			}
+
+			if ( 'wcfm' === $plugin_slug ) {
+				if ( $has_field( 'vendors' ) ) {
+					$out['data']['vendors'] = $this->collect_marketplace_vendors( array( 'wcfm_vendor', 'vendor', 'seller' ), $limit );
+					$out['counts']['vendors'] = is_array( $out['data']['vendors'] ) ? count( $out['data']['vendors'] ) : 0;
+				}
+				if ( $has_field( 'orders' ) ) {
+					$out['data']['orders'] = $this->collect_wc_orders( $limit, $days, array(), false );
+					$out['counts']['orders'] = is_array( $out['data']['orders'] ) ? count( $out['data']['orders'] ) : 0;
+				}
+				if ( $has_field( 'customers' ) ) {
+					$out['data']['customers'] = $this->collect_wc_customers( $limit );
+					$out['counts']['customers'] = is_array( $out['data']['customers'] ) ? count( $out['data']['customers'] ) : 0;
+				}
+				if ( $has_field( 'products' ) ) {
+					$out['data']['products'] = $this->collect_wc_products( $limit );
+					$out['counts']['products'] = is_array( $out['data']['products'] ) ? count( $out['data']['products'] ) : 0;
+				}
+				if ( $has_field( 'refunds' ) ) {
+					$out['data']['refunds'] = $this->collect_wc_refunds( $limit, $days );
+					$out['counts']['refunds'] = is_array( $out['data']['refunds'] ) ? count( $out['data']['refunds'] ) : 0;
+				}
+				if ( $has_field( 'payouts' ) ) {
+					$out['data']['payouts'] = $this->collect_marketplace_payouts( 'wcfm', $limit, $days, $out['errors'] );
+					$out['counts']['payouts'] = is_array( $out['data']['payouts'] ) ? count( $out['data']['payouts'] ) : 0;
+				}
+				return $out;
+			}
+
+			if ( 'stripe' === $plugin_slug ) {
+				if ( $has_field( 'payments' ) ) {
+					$out['data']['payments'] = $this->collect_wc_payments( $limit, $days, array( 'stripe' ) );
+					$out['counts']['payments'] = is_array( $out['data']['payments'] ) ? count( $out['data']['payments'] ) : 0;
+				}
+				if ( $has_field( 'refunds' ) ) {
+					$out['data']['refunds'] = $this->collect_wc_refunds( $limit, $days, array( 'stripe' ) );
+					$out['counts']['refunds'] = is_array( $out['data']['refunds'] ) ? count( $out['data']['refunds'] ) : 0;
+				}
+				if ( $has_field( 'payouts' ) ) {
+					$out['data']['payouts'] = array();
+					$out['counts']['payouts'] = 0;
+				}
+				return $out;
+			}
+
+			if ( 'paypal' === $plugin_slug ) {
+				if ( $has_field( 'payments' ) ) {
+					$out['data']['payments'] = $this->collect_wc_payments( $limit, $days, array( 'paypal' ) );
+					$out['counts']['payments'] = is_array( $out['data']['payments'] ) ? count( $out['data']['payments'] ) : 0;
+				}
+				if ( $has_field( 'refunds' ) ) {
+					$out['data']['refunds'] = $this->collect_wc_refunds( $limit, $days, array( 'paypal' ) );
+					$out['counts']['refunds'] = is_array( $out['data']['refunds'] ) ? count( $out['data']['refunds'] ) : 0;
+				}
+				if ( $has_field( 'payouts' ) ) {
+					$out['data']['payouts'] = array();
+					$out['counts']['payouts'] = 0;
+				}
+				return $out;
+			}
+		} catch ( Throwable $e ) {
+			$out['errors'][] = array(
+				'error'   => 'collector_exception',
+				'message' => sanitize_text_field( (string) $e->getMessage() ),
+			);
+		}
+
+		return $out;
+	}
+
+	private function collect_wc_orders( $limit, $days, $gateways = array(), $refund_only = false ) {
+		$limit = absint( $limit );
+		$days  = absint( $days );
+		$gateways = is_array( $gateways ) ? array_map( 'sanitize_key', $gateways ) : array();
+
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return array();
+		}
+
+		$after = gmdate( 'Y-m-d H:i:s', time() - ( $days * DAY_IN_SECONDS ) );
+		$args = array(
+			'limit'        => $limit,
+			'orderby'      => 'date',
+			'order'        => 'DESC',
+			'date_created' => '>' . $after,
+			'paginate'     => false,
+		);
+		if ( $refund_only ) {
+			$args['type'] = 'shop_order_refund';
+		}
+		$orders = wc_get_orders( $args );
+		if ( ! is_array( $orders ) ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( $orders as $order ) {
+			if ( ! is_object( $order ) || ! method_exists( $order, 'get_id' ) ) {
+				continue;
+			}
+			$pm = method_exists( $order, 'get_payment_method' ) ? (string) $order->get_payment_method() : '';
+			if ( ! empty( $gateways ) ) {
+				$pm_norm = sanitize_key( $pm );
+				$ok = false;
+				foreach ( $gateways as $g ) {
+					$g = sanitize_key( (string) $g );
+					if ( '' === $g ) {
+						continue;
+					}
+					if ( false !== strpos( $pm_norm, $g ) ) {
+						$ok = true;
+						break;
+					}
+				}
+				if ( ! $ok ) {
+					continue;
+				}
+			}
+
+			$date_created = '';
+			if ( method_exists( $order, 'get_date_created' ) ) {
+				$dt = $order->get_date_created();
+				if ( is_object( $dt ) && method_exists( $dt, 'date' ) ) {
+					$date_created = (string) $dt->date( 'c' );
+				}
+			}
+
+			$out[] = array(
+				'id'             => (int) $order->get_id(),
+				'number'         => method_exists( $order, 'get_order_number' ) ? sanitize_text_field( (string) $order->get_order_number() ) : '',
+				'status'         => method_exists( $order, 'get_status' ) ? sanitize_key( (string) $order->get_status() ) : '',
+				'currency'       => method_exists( $order, 'get_currency' ) ? sanitize_text_field( (string) $order->get_currency() ) : '',
+				'total'          => method_exists( $order, 'get_total' ) ? (string) $order->get_total() : '',
+				'date_created'   => $date_created,
+				'customer_id'    => method_exists( $order, 'get_customer_id' ) ? (int) $order->get_customer_id() : 0,
+				'payment_method' => sanitize_text_field( $pm ),
+				'payment_title'  => method_exists( $order, 'get_payment_method_title' ) ? sanitize_text_field( (string) $order->get_payment_method_title() ) : '',
+			);
+		}
+
+		return $out;
+	}
+
+	private function collect_wc_payments( $limit, $days, $gateways = array() ) {
+		$orders = $this->collect_wc_orders( $limit, $days, $gateways, false );
+		$out = array();
+		foreach ( (array) $orders as $o ) {
+			if ( ! is_array( $o ) ) {
+				continue;
+			}
+			$out[] = array(
+				'order_id'       => isset( $o['id'] ) ? (int) $o['id'] : 0,
+				'order_number'   => isset( $o['number'] ) ? sanitize_text_field( (string) $o['number'] ) : '',
+				'status'         => isset( $o['status'] ) ? sanitize_key( (string) $o['status'] ) : '',
+				'currency'       => isset( $o['currency'] ) ? sanitize_text_field( (string) $o['currency'] ) : '',
+				'amount'         => isset( $o['total'] ) ? (string) $o['total'] : '',
+				'date_created'   => isset( $o['date_created'] ) ? sanitize_text_field( (string) $o['date_created'] ) : '',
+				'payment_method' => isset( $o['payment_method'] ) ? sanitize_text_field( (string) $o['payment_method'] ) : '',
+				'payment_title'  => isset( $o['payment_title'] ) ? sanitize_text_field( (string) $o['payment_title'] ) : '',
+			);
+		}
+		return $out;
+	}
+
+	private function collect_wc_refunds( $limit, $days, $gateways = array() ) {
+		return $this->collect_wc_orders( $limit, $days, $gateways, true );
+	}
+
+	private function collect_wc_customers( $limit ) {
+		$limit = absint( $limit );
+		if ( ! function_exists( 'get_users' ) ) {
+			return array();
+		}
+		$args = array(
+			'number'  => $limit,
+			'orderby' => 'registered',
+			'order'   => 'DESC',
+			'role__in' => array( 'customer' ),
+			'fields'  => array( 'ID', 'user_login', 'user_email', 'display_name', 'user_registered' ),
+		);
+		$users = get_users( $args );
+		if ( ! is_array( $users ) ) {
+			return array();
+		}
+		$out = array();
+		foreach ( $users as $u ) {
+			if ( ! is_object( $u ) ) {
+				continue;
+			}
+			$out[] = array(
+				'id'              => isset( $u->ID ) ? (int) $u->ID : 0,
+				'login'           => isset( $u->user_login ) ? sanitize_user( (string) $u->user_login, true ) : '',
+				'email'           => isset( $u->user_email ) ? sanitize_email( (string) $u->user_email ) : '',
+				'display_name'    => isset( $u->display_name ) ? sanitize_text_field( (string) $u->display_name ) : '',
+				'user_registered' => isset( $u->user_registered ) ? sanitize_text_field( (string) $u->user_registered ) : '',
+			);
+		}
+		return $out;
+	}
+
+	private function collect_wc_products( $limit ) {
+		$limit = absint( $limit );
+		if ( ! function_exists( 'wc_get_products' ) ) {
+			return array();
+		}
+		$products = wc_get_products(
+			array(
+				'limit'   => $limit,
+				'orderby' => 'date',
+				'order'   => 'DESC',
+			)
+		);
+		if ( ! is_array( $products ) ) {
+			return array();
+		}
+		$out = array();
+		foreach ( $products as $p ) {
+			if ( ! is_object( $p ) || ! method_exists( $p, 'get_id' ) ) {
+				continue;
+			}
+			$out[] = array(
+				'id'         => (int) $p->get_id(),
+				'name'       => method_exists( $p, 'get_name' ) ? sanitize_text_field( (string) $p->get_name() ) : '',
+				'sku'        => method_exists( $p, 'get_sku' ) ? sanitize_text_field( (string) $p->get_sku() ) : '',
+				'price'      => method_exists( $p, 'get_price' ) ? (string) $p->get_price() : '',
+				'currency'   => function_exists( 'get_woocommerce_currency' ) ? sanitize_text_field( (string) get_woocommerce_currency() ) : '',
+				'status'     => method_exists( $p, 'get_status' ) ? sanitize_key( (string) $p->get_status() ) : '',
+				'type'       => method_exists( $p, 'get_type' ) ? sanitize_key( (string) $p->get_type() ) : '',
+			);
+		}
+		return $out;
+	}
+
+	private function collect_wc_coupons( $limit ) {
+		$limit = absint( $limit );
+		if ( ! function_exists( 'get_posts' ) ) {
+			return array();
+		}
+		$posts = get_posts(
+			array(
+				'post_type'      => 'shop_coupon',
+				'posts_per_page' => $limit,
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+				'post_status'    => array( 'publish', 'draft' ),
+			)
+		);
+		if ( ! is_array( $posts ) ) {
+			return array();
+		}
+		$out = array();
+		foreach ( $posts as $p ) {
+			if ( ! is_object( $p ) ) {
+				continue;
+			}
+			$out[] = array(
+				'id'     => isset( $p->ID ) ? (int) $p->ID : 0,
+				'code'   => isset( $p->post_title ) ? sanitize_text_field( (string) $p->post_title ) : '',
+				'status' => isset( $p->post_status ) ? sanitize_key( (string) $p->post_status ) : '',
+			);
+		}
+		return $out;
+	}
+
+	private function collect_wc_subscriptions( $limit, $days, &$errors ) {
+		$limit  = absint( $limit );
+		$days   = absint( $days );
+		$errors = is_array( $errors ) ? $errors : array();
+
+		if ( ! function_exists( 'wcs_get_subscriptions' ) ) {
+			$errors[] = array(
+				'error'   => 'subscriptions_unavailable',
+				'message' => 'WooCommerce Subscriptions not available',
+			);
+			return array();
+		}
+
+		$after = gmdate( 'Y-m-d H:i:s', time() - ( $days * DAY_IN_SECONDS ) );
+		$subs = wcs_get_subscriptions(
+			array(
+				'subscriptions_per_page' => $limit,
+				'order'                  => 'DESC',
+				'orderby'                => 'date',
+				'date_created'           => '>' . $after,
+			)
+		);
+		if ( ! is_array( $subs ) ) {
+			return array();
+		}
+		$out = array();
+		foreach ( $subs as $s ) {
+			if ( ! is_object( $s ) || ! method_exists( $s, 'get_id' ) ) {
+				continue;
+			}
+			$out[] = array(
+				'id'       => (int) $s->get_id(),
+				'status'   => method_exists( $s, 'get_status' ) ? sanitize_key( (string) $s->get_status() ) : '',
+				'total'    => method_exists( $s, 'get_total' ) ? (string) $s->get_total() : '',
+				'currency' => method_exists( $s, 'get_currency' ) ? sanitize_text_field( (string) $s->get_currency() ) : '',
+			);
+		}
+		return $out;
+	}
+
+	private function collect_marketplace_vendors( $roles, $limit ) {
+		$limit = absint( $limit );
+		$roles = is_array( $roles ) ? array_values( array_filter( array_map( 'sanitize_key', $roles ) ) ) : array();
+		if ( empty( $roles ) || ! function_exists( 'get_users' ) ) {
+			return array();
+		}
+		$args = array(
+			'number'   => $limit,
+			'orderby'  => 'registered',
+			'order'    => 'DESC',
+			'role__in' => $roles,
+			'fields'   => array( 'ID', 'user_login', 'user_email', 'display_name', 'user_registered' ),
+		);
+		$users = get_users( $args );
+		if ( ! is_array( $users ) ) {
+			return array();
+		}
+		$out = array();
+		foreach ( $users as $u ) {
+			if ( ! is_object( $u ) ) {
+				continue;
+			}
+			$out[] = array(
+				'id'              => isset( $u->ID ) ? (int) $u->ID : 0,
+				'login'           => isset( $u->user_login ) ? sanitize_user( (string) $u->user_login, true ) : '',
+				'email'           => isset( $u->user_email ) ? sanitize_email( (string) $u->user_email ) : '',
+				'display_name'    => isset( $u->display_name ) ? sanitize_text_field( (string) $u->display_name ) : '',
+				'user_registered' => isset( $u->user_registered ) ? sanitize_text_field( (string) $u->user_registered ) : '',
+			);
+		}
+		return $out;
+	}
+
+	private function collect_marketplace_payouts( $marketplace, $limit, $days, &$errors ) {
+		$marketplace = sanitize_key( (string) $marketplace );
+		$limit = absint( $limit );
+		$days  = absint( $days );
+		$errors = is_array( $errors ) ? $errors : array();
+		if ( 'dokan' === $marketplace ) {
+			if ( ! function_exists( 'dokan' ) ) {
+				$errors[] = array(
+					'error'   => 'dokan_unavailable',
+					'message' => 'Dokan not available',
+				);
+				return array();
+			}
+			$errors[] = array(
+				'error'   => 'payouts_unavailable',
+				'message' => 'Dokan payouts collector not implemented',
+			);
+			return array();
+		}
+		if ( 'wcfm' === $marketplace ) {
+			if ( ! function_exists( 'wcfm' ) ) {
+				$errors[] = array(
+					'error'   => 'wcfm_unavailable',
+					'message' => 'WCFM not available',
+				);
+				return array();
+			}
+			$errors[] = array(
+				'error'   => 'payouts_unavailable',
+				'message' => 'WCFM payouts collector not implemented',
+			);
+			return array();
+		}
+		return array();
+	}
+
 	public function init() {
 		try {
 			if ( function_exists( 'wp_clear_scheduled_hook' ) ) {
@@ -927,22 +1419,29 @@ class w91099ch_Core {
 				'total_affiliates'     => $total_affiliates,
 				'active_plugins_count' => is_array( $active_plugins_snapshot ) ? count( $active_plugins_snapshot ) : 0,
 			);
-			$plugin_full_payload = array(
-				'data' => array(
+
+			// Dispatch via webhook dispatcher (same pattern as all other sync handlers).
+			$webhook_status = array( 'attempted' => 0, 'sent' => 0, 'errors' => array() );
+			if ( class_exists( 'w91099ch_Webhook_Dispatcher' ) ) {
+				$sync_data = array(
 					'plugins'        => is_array( $all_plugins_snapshot ) ? $all_plugins_snapshot : array(),
 					'active_plugins' => is_array( $active_plugins_snapshot ) ? $active_plugins_snapshot : array(),
-				),
-				'stats'          => $plugin_stats,
-				'plugins'        => is_array( $all_plugins_snapshot ) ? $all_plugins_snapshot : array(),
-				'active_plugins' => is_array( $active_plugins_snapshot ) ? $active_plugins_snapshot : array(),
-			);
-			$webhook_status = $this->api->send_to_webhook(
-				'ecommerce',
-				$all_plugins_snapshot,
-				array( 'total' => count( $all_plugins_snapshot ) ),
-				'w91099ch_sync_ecommerce_data',
-				array( 'ecommerce_plugins' => $all_plugins_snapshot )
-			);
+					'stats'          => $plugin_stats,
+				);
+				$payload = function_exists( 'w91099ch_build_full_webhook_payload' )
+					? w91099ch_build_full_webhook_payload( 'plugin_data_synced', $sync_data )
+					: array_merge(
+						array(
+							'event_type'  => 'plugin_data_synced',
+							'timestamp'   => gmdate( 'c' ),
+							'site_url'    => get_site_url(),
+							'site_name'   => get_bloginfo( 'name' ),
+							'admin_email' => get_option( 'admin_email', '' ),
+						),
+						$sync_data
+					);
+				$webhook_status = w91099ch_Webhook_Dispatcher::dispatch_raw_payload( $payload, 'plugin_data_synced' );
+			}
 
 			wp_send_json_success(
 				array(
@@ -1157,6 +1656,8 @@ class w91099ch_Core {
 			wp_send_json_error( esc_html__( 'Insufficient permissions', 'w9-1099-chaser' ) );
 		}
 
+		$this->enforce_admin_consent_or_fail();
+
 		try {
 			if ( ! class_exists( 'w91099ch_Ecommerce_Plugin_Detector' ) ) {
 				require_once w91099ch_PLUGIN_PATH . 'includes/ecommerce-plugin-detector-init.php';
@@ -1164,6 +1665,50 @@ class w91099ch_Core {
 
 			$detector = new w91099ch_Ecommerce_Plugin_Detector();
 			$plugins  = $detector->get_ecommerce_plugins_data();
+
+			$settings = get_option( 'w91099ch_ecommerce_data_settings', array() );
+			if ( ! is_array( $settings ) ) {
+				$settings = array();
+			}
+
+			$selected = array();
+			foreach ( (array) $plugins as $slug => $plugin_meta ) {
+				$slug = sanitize_key( (string) $slug );
+				if ( '' === $slug ) {
+					continue;
+				}
+
+				$cfg = isset( $settings[ $slug ] ) && is_array( $settings[ $slug ] ) ? $settings[ $slug ] : array();
+				// Always treat platforms as enabled (Enable checkbox removed from UI)
+				$fields_cfg = ( isset( $cfg['fields'] ) && is_array( $cfg['fields'] ) ) ? $cfg['fields'] : array();
+				$selected_fields = array();
+				foreach ( $fields_cfg as $field_key => $is_on ) {
+					$field_key = sanitize_key( (string) $field_key );
+					if ( '' === $field_key ) {
+						continue;
+					}
+					if ( (bool) $is_on ) {
+						$selected_fields[] = $field_key;
+					}
+				}
+
+				$defaults = $this->get_ecommerce_sync_defaults();
+				$datasets = $this->collect_ecommerce_datasets( $slug, $selected_fields, $defaults );
+
+				$plugin_meta = is_array( $plugin_meta ) ? $plugin_meta : array();
+				$selected[] = array(
+					'slug'            => $slug,
+					'name'            => sanitize_text_field( (string) ( $plugin_meta['name'] ?? $slug ) ),
+					'version'          => sanitize_text_field( (string) ( $plugin_meta['version'] ?? '' ) ),
+					'active'           => (bool) ( $plugin_meta['active'] ?? false ),
+					'detected'         => (bool) ( $plugin_meta['detected'] ?? true ),
+					'selected_fields'  => array_values( $selected_fields ),
+					'fields_selected'  => count( $selected_fields ),
+					'data'             => isset( $datasets['data'] ) && is_array( $datasets['data'] ) ? $datasets['data'] : array(),
+					'counts'           => isset( $datasets['counts'] ) && is_array( $datasets['counts'] ) ? $datasets['counts'] : array(),
+					'errors'           => isset( $datasets['errors'] ) && is_array( $datasets['errors'] ) ? $datasets['errors'] : array(),
+				);
+			}
 
 			$payload = array(
 				'event_type'  => 'ecommerce_synced',
@@ -1173,16 +1718,18 @@ class w91099ch_Core {
 				'admin_email' => sanitize_email( (string) get_option( 'admin_email', '' ) ),
 				'sheet_tab'   => 'ecommerce',
 				'card_key'    => 'ecommerce_data',
-				'data'        => array_values( $plugins ),
+				'data'        => array_values( $selected ),
 				'summary'     => array(
-					'total_detected' => count( $plugins ),
+					'total_detected'   => count( $plugins ),
+					'total_selected'   => count( $selected ),
+					'settings_enabled' => array_keys( $settings ), // All platforms treated as enabled
 				),
 			);
 
 			$webhook_status = $this->api->send_to_webhook(
 				'ecommerce',
-				array_values( $plugins ),
-				array( 'total' => count( $plugins ) ),
+				array_values( $selected ),
+				array( 'total' => count( $selected ) ),
 				'w91099ch_sync_ecommerce_data',
 				$payload
 			);
@@ -1686,6 +2233,7 @@ class w91099ch_Core {
 				'accounting_bookkeeping_plugins_synced',
 				'payout_plugins_synced',
 				'wallet_payout_plugins_synced',
+				'ecommerce_plugins_synced',
 			);
 
 			foreach ( $events as $event_type ) {

@@ -22,13 +22,13 @@ class w91099ch_Ecommerce_Plugin_Detector {
 				'name_regex'   => '/\bwoocommerce\b/i',
 			),
 			array(
-				'slug'         => 'dokan-lite',
+				'slug'         => 'dokan',
 				'name'         => 'Dokan',
 				'plugin_files' => array( 'dokan-lite/dokan.php', 'dokan/dokan.php' ),
 				'name_regex'   => '/\bdokan\b/i',
 			),
 			array(
-				'slug'         => 'wc-multivendor-marketplace',
+				'slug'         => 'wcfm',
 				'name'         => 'WCFM',
 				'plugin_files' => array( 'wc-multivendor-marketplace/wc-multivendor-marketplace.php', 'wc-frontend-manager/wc-frontend-marketplace.php' ),
 				'name_regex'   => '/\bwcfm\b|\bfrontend\s+manager\b/i',

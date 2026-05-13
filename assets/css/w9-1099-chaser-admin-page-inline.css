@@ -1058,6 +1058,26 @@
         --mp-card-accent-2: #fbbf24;
     }
 
+    /* Disabled state for cards when disconnected */
+    .mp-cards-grid.mp-cards-disabled {
+        opacity: 0.6;
+    }
+
+    .mp-cards-grid.mp-cards-disabled .mp-card {
+        opacity: 0.7;
+        filter: grayscale(30%);
+    }
+
+    .mp-cards-grid.mp-cards-disabled .mp-card button:disabled,
+    .mp-cards-grid.mp-cards-disabled .mp-card input[type="checkbox"]:disabled,
+    .mp-cards-grid.mp-cards-disabled .mp-card select:disabled,
+    .mp-cards-grid.mp-cards-disabled .mp-card .mp-btn-primary:disabled,
+    .mp-cards-grid.mp-cards-disabled .mp-card .mp-btn-secondary:disabled {
+        pointer-events: none;
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
     .mp-shell {
         color-scheme: light;
     }

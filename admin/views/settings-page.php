@@ -272,6 +272,10 @@ $w91099ch_is_connected = ( isset( $this->core ) && is_object( $this->core ) && m
 													<input type="checkbox" id="mypowerly-consent" class="mt-1" />
 													<span class="text-sm text-gray-700">I understand that connecting will securely sync and store selected WordPress data in MyPowerly as part of the connector.</span>
 												</label>
+												<label class="flex items-start gap-3 cursor-pointer mt-3">
+													<input type="checkbox" id="mypowerly-auto-sync-on-connect" class="mt-1" <?php checked( get_option( 'w91099ch_auto_sync_on_connect', false ) ); ?> />
+													<span class="text-sm text-gray-700">Automatically sync all data to Mypowerly right after connecting.</span>
+												</label>
 												<div class="mt-4">
 													<div class="text-sm font-semibold text-gray-800 mb-2">Connection code (optional)</div>
 													<div class="flex items-center gap-3">
@@ -310,6 +314,21 @@ $w91099ch_is_connected = ( isset( $this->core ) && is_object( $this->core ) && m
 <!-- JavaScript for Display Settings -->
 <script>
 jQuery(document).ready(function($) {
+    // Save auto-sync-on-connect preference when the checkbox is toggled.
+    $('#mypowerly-auto-sync-on-connect').off('change.autoSyncSave').on('change.autoSyncSave', function() {
+        var checked = this.checked;
+        if (!window.w91099chConnector || !window.w91099chConnector.ajaxurl) return;
+        $.ajax({
+            url: window.w91099chConnector.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'w91099ch_save_auto_sync_on_connect',
+                nonce: window.w91099chConnector.nonce,
+                enabled: checked ? '1' : '0'
+            }
+        });
+    });
+
     // Load current settings
     var currentSettings = {
         display_mode: '<?php echo esc_js( get_option( 'w91099ch_w9_display_method', 'all' ) ); ?>',

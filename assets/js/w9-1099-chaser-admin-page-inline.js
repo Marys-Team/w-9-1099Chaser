@@ -85,8 +85,226 @@ jQuery(document).ready(function($) {
 
         $btn.html('<i class="fas fa-sync-alt mp-animate-pulse"></i> ' + label);
     }
+
+    function updateCardsDisabledState(isConnected) {
+        const $cardsGrid = $('.mp-cards-grid');
+        if (!$cardsGrid.length) {
+            return;
+        }
+
+        if (isConnected) {
+            $cardsGrid.removeClass('mp-cards-disabled');
+        } else {
+            $cardsGrid.addClass('mp-cards-disabled');
+        }
+    }
+
     window.persistAdminConsentIfNeeded = persistAdminConsentIfNeeded;
     window.updateAffiliatesSyncButtonCount = updateAffiliatesSyncButtonCount;
+    window.updateCardsDisabledState = updateCardsDisabledState;
+
+    // ── Auto-sync on connect ──────────────────────────────────────────────────
+    // If the user had "auto sync after connection" checked and we just landed
+    // back here after a successful connection, fire sync-all automatically.
+    (function maybeAutoSyncAfterConnect() {
+        if (!window.w91099chConnector || !window.w91099chConnector.pending_auto_sync) return;
+        if (!window.w91099chConnector.is_connected) return;
+        if (!window.w91099chConnector.ajaxurl || !window.w91099chConnector.nonce) return;
+
+        // ── Build the overlay modal HTML ──────────────────────────────────────
+        var overlayHtml =
+            '<div id="mp-auto-sync-overlay" style="'
+            +   'position:fixed;top:0;left:0;width:100%;height:100%;'
+            +   'background:rgba(15,23,42,0.55);z-index:99999;'
+            +   'display:flex;align-items:center;justify-content:center;'
+            +   'backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);">'
+            + '<div id="mp-auto-sync-modal" style="'
+            +   'background:#fff;border-radius:16px;padding:0;width:100%;max-width:560px;'
+            +   'margin:20px;box-shadow:0 25px 60px rgba(0,0,0,0.25);overflow:hidden;">'
+
+            // ── Header ──
+            + '<div style="'
+            +   'background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);'
+            +   'padding:24px 28px;display:flex;align-items:center;gap:14px;">'
+            + '<div style="'
+            +   'width:44px;height:44px;border-radius:10px;'
+            +   'background:rgba(255,255,255,0.2);'
+            +   'display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+            + '<i class="fas fa-rotate" id="mp-auto-sync-icon" style="color:#fff;font-size:20px;"></i>'
+            + '</div>'
+            + '<div>'
+            + '<h3 style="margin:0;color:#fff;font-size:18px;font-weight:700;line-height:1.2;">Syncing All Data to Mypowerly</h3>'
+            + '<p style="margin:4px 0 0;color:rgba(255,255,255,0.8);font-size:13px;">Connected successfully — sending your data now&hellip;</p>'
+            + '</div>'
+            + '</div>'
+
+            // ── Body: progress state ──
+            + '<div id="mp-auto-sync-body-progress" style="padding:28px;">'
+
+            // Badge row
+            + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;">'
+            + ['Plugins','Affiliates/Vendors','Team/Users','Forms','Memberships','Contractors','Freelancers','Accounting','Wallet/Payout','Ecommerce'].map(function(label) {
+                return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;'
+                    + 'border-radius:20px;background:#f1f5f9;font-size:11px;font-weight:600;color:#475569;">'
+                    + '<span style="width:6px;height:6px;border-radius:50%;background:#94a3b8;display:inline-block;"></span>'
+                    + label + '</span>';
+            }).join('')
+            + '</div>'
+
+            // Progress bar
+            + '<div style="margin-bottom:10px;">'
+            + '<div style="display:flex;justify-content:space-between;margin-bottom:6px;">'
+            + '<span id="mp-auto-sync-step" style="font-size:13px;color:#64748b;">Preparing&hellip;</span>'
+            + '<span id="mp-auto-sync-pct" style="font-size:13px;font-weight:700;color:#4f46e5;">0%</span>'
+            + '</div>'
+            + '<div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;">'
+            + '<div id="mp-auto-sync-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#4f46e5,#7c3aed);border-radius:4px;transition:width 0.4s ease;"></div>'
+            + '</div>'
+            + '</div>'
+
+            + '<p style="margin:14px 0 0;font-size:12px;color:#94a3b8;text-align:center;">Please wait — this usually takes a few seconds.</p>'
+            + '</div>'
+
+            // ── Body: success state (hidden initially) ──
+            + '<div id="mp-auto-sync-body-success" style="display:none;padding:28px;">'
+            + '<div style="'
+            +   'padding:20px 24px;background:linear-gradient(135deg,#f0fdf4,#ecfdf5);'
+            +   'border:1px solid #bbf7d0;border-radius:12px;'
+            +   'display:flex;justify-content:space-between;align-items:center;gap:16px;">'
+            + '<div style="display:flex;align-items:center;gap:14px;">'
+            + '<div style="width:44px;height:44px;border-radius:10px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+            + '<i class="fas fa-circle-check" style="color:#16a34a;font-size:22px;"></i>'
+            + '</div>'
+            + '<div>'
+            + '<h4 style="margin:0 0 4px;font-size:17px;font-weight:700;color:#1e293b;">Sync Complete!</h4>'
+            + '<p style="margin:0;font-size:13px;color:#475569;">All data synchronized successfully with Mypowerly. No further action is required.</p>'
+            + '</div>'
+            + '</div>'
+            + '<div style="text-align:right;flex-shrink:0;">'
+            + '<div style="font-size:11px;color:#64748b;margin-bottom:2px;">Total Time</div>'
+            + '<div id="mp-auto-sync-duration" style="font-size:22px;font-weight:700;color:#1e293b;">0s</div>'
+            + '</div>'
+            + '</div>'
+            + '<div style="margin-top:20px;text-align:center;">'
+            + '<button id="mp-auto-sync-close-btn" style="'
+            +   'padding:10px 28px;background:#4f46e5;color:#fff;border:none;'
+            +   'border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">'
+            + 'Continue</button>'
+            + '</div>'
+            + '</div>'
+
+            // ── Body: error state (hidden initially) ──
+            + '<div id="mp-auto-sync-body-error" style="display:none;padding:28px;">'
+            + '<div style="'
+            +   'padding:20px 24px;background:linear-gradient(135deg,#fff1f2,#fef2f2);'
+            +   'border:1px solid #fecaca;border-radius:12px;'
+            +   'display:flex;align-items:flex-start;gap:14px;">'
+            + '<div style="width:44px;height:44px;border-radius:10px;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+            + '<i class="fas fa-circle-xmark" style="color:#dc2626;font-size:22px;"></i>'
+            + '</div>'
+            + '<div>'
+            + '<h4 style="margin:0 0 6px;font-size:17px;font-weight:700;color:#1e293b;">Sync Failed</h4>'
+            + '<p id="mp-auto-sync-error-msg" style="margin:0;font-size:13px;color:#475569;"></p>'
+            + '<button onclick="window.location.reload()" style="'
+            +   'margin-top:14px;padding:8px 20px;background:#fff;color:#dc2626;'
+            +   'border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">'
+            + '<i class="fas fa-rotate-right" style="margin-right:6px;"></i>Try Again</button>'
+            + '</div>'
+            + '</div>'
+            + '</div>'
+
+            + '</div>'  // modal
+            + '</div>'; // overlay
+
+        $('body').append(overlayHtml);
+
+        // Animate the spinner icon
+        var $icon = $('#mp-auto-sync-icon');
+        var spinAngle = 0;
+        var spinTimer = setInterval(function() {
+            spinAngle = (spinAngle + 15) % 360;
+            $icon.css('transform', 'rotate(' + spinAngle + 'deg)');
+        }, 40);
+
+        function setProgress(pct, stepText) {
+            $('#mp-auto-sync-bar').css('width', pct + '%');
+            $('#mp-auto-sync-pct').text(Math.round(pct) + '%');
+            if (stepText) { $('#mp-auto-sync-step').text(stepText); }
+        }
+
+        var startTime = Date.now();
+        setProgress(10, 'Preparing consolidated payload\u2026');
+
+        // Animate progress to 80% while waiting for the AJAX response
+        var fakeProgress = 10;
+        var fakeTimer = setInterval(function() {
+            if (fakeProgress < 78) {
+                fakeProgress += 2;
+                setProgress(fakeProgress, 'Sending data to Mypowerly\u2026');
+            }
+        }, 300);
+
+        $.ajax({
+            url: window.w91099chConnector.ajaxurl,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'w91099ch_sync_all_webhook',
+                nonce: window.w91099chConnector.nonce
+            },
+            success: function(response) {
+                clearInterval(fakeTimer);
+                clearInterval(spinTimer);
+
+                if (response && response.success) {
+                    setProgress(100, 'All data synced!');
+                    var duration = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+                    $('#mp-auto-sync-duration').text(duration);
+
+                    // Update the existing sync-all UI on the page if it's present
+                    var now = new Date();
+                    var timeStr = now.toLocaleString();
+                    $('#last-plugin-sync-time').text(timeStr);
+                    $('#last-affiliates-sync-time').text(timeStr);
+                    $('#last-team-sync-time').text(timeStr);
+                    $('#plugin-sync-status, #affiliates-sync-status, #team-sync-status').text('Synced via Auto-Sync');
+                    $('#form-sync-status, #contractor-sync-status, #freelancer-contractor-sync-status').text('Synced via Auto-Sync');
+                    $('#accounting-bookkeeping-sync-status, #wallet-payout-sync-status, #ecommerce-sync-status').text('Synced via Auto-Sync');
+
+                    // Show success state after a brief pause
+                    setTimeout(function() {
+                        $('#mp-auto-sync-body-progress').hide();
+                        $('#mp-auto-sync-body-success').show();
+                        // Update header
+                        $('#mp-auto-sync-icon').css('transform', '').removeClass().addClass('fas fa-circle-check').css('color', '#fff');
+                    }, 400);
+                } else {
+                    var msg = (response && response.data)
+                        ? (typeof response.data === 'string' ? response.data : (response.data.message || JSON.stringify(response.data)))
+                        : 'Sync failed. Please retry.';
+                    $('#mp-auto-sync-error-msg').text(msg);
+                    $('#mp-auto-sync-body-progress').hide();
+                    $('#mp-auto-sync-body-error').show();
+                }
+            },
+            error: function(xhr) {
+                clearInterval(fakeTimer);
+                clearInterval(spinTimer);
+                var msg = 'Connection error. Please try again.';
+                if (xhr && xhr.responseText) {
+                    try { msg = JSON.parse(xhr.responseText).data || msg; } catch(e) {}
+                }
+                $('#mp-auto-sync-error-msg').text(msg);
+                $('#mp-auto-sync-body-progress').hide();
+                $('#mp-auto-sync-body-error').show();
+            }
+        });
+
+        // Close button
+        $(document).on('click', '#mp-auto-sync-close-btn', function() {
+            $('#mp-auto-sync-overlay').fadeOut(200, function() { $(this).remove(); });
+        });
+    }());
     // Connect button (when not connected to MyPowerly)
     $('#mypowerly-w9-connect').on('click', function(e) {
         e.preventDefault();
@@ -706,6 +924,10 @@ jQuery(document).ready(function($) {
             }
             return $('#disconnect-mypowerly').length > 0;
         })();
+
+        // Update cards disabled state based on connection status
+        updateCardsDisabledState(isConnected);
+
         const $headerSection = $('.min-h-screen').children('div.relative').first();
 
         const $w9 = $('#w9-form-section').length
@@ -792,6 +1014,10 @@ jQuery(document).ready(function($) {
                 + '          <input type="checkbox" id="mypowerly-consent" class="mt-1" />'
                 + '          <span class="text-sm text-gray-700">I understand that connecting will securely sync and store My WordPress data in Mypowerly to unlock additional features.</span>'
                 + '        </label>'
+                + '        <label class="flex items-start gap-3 cursor-pointer mt-3">'
+                + '          <input type="checkbox" id="mypowerly-auto-sync-on-connect" class="mt-1" />'
+                + '          <span class="text-sm text-gray-700">Automatically sync all data to Mypowerly right after connecting.</span>'
+                + '        </label>'
                 + '        <div class="mt-4">'
                 + '          <div class="text-sm font-semibold text-gray-800 mb-2">Discount Code (optional)</div>'
                 + '          <div class="flex items-center gap-3">'
@@ -847,6 +1073,24 @@ jQuery(document).ready(function($) {
                     localStorage.setItem(storageKey, '0');
                 }
             }
+
+            // Initialize auto-sync checkbox from server setting and wire up save-on-change
+            var autoSyncInitial = !!(window.w91099chConnector && window.w91099chConnector.auto_sync_on_connect);
+            $('#mypowerly-auto-sync-on-connect').prop('checked', autoSyncInitial);
+
+            $('#mypowerly-auto-sync-on-connect').off('change.autoSync').on('change.autoSync', function() {
+                var checked = !!this.checked;
+                if (!window.w91099chConnector || !window.w91099chConnector.ajaxurl) return;
+                $.ajax({
+                    url: window.w91099chConnector.ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: 'w91099ch_save_auto_sync_on_connect',
+                        nonce: window.w91099chConnector.nonce,
+                        enabled: checked ? '1' : '0'
+                    }
+                });
+            });
         }
 
         const handleOptInChange = function(checked) {
@@ -1339,28 +1583,32 @@ jQuery(document).ready(function($) {
         return msg;
     }
 
-    function setupConsentGate(checkboxSelector, buttonSelector) {
+    function setupConsentGate(checkboxSelector, buttonSelector, statusSelector) {
         const $cb = $(checkboxSelector);
         const $btn = $(buttonSelector);
+        const $status = statusSelector ? $(statusSelector) : null;
         if (!$btn.length) return;
 
         const apply = function() {
             const ok = $cb.length && $cb.is(':checked');
             $btn.prop('disabled', !ok);
             $btn.toggleClass('opacity-60 cursor-not-allowed', !ok);
+            if ($status && $status.length) {
+                $status.text(ok ? 'Ready to sync' : 'Check consent to enable sync');
+            }
         };
 
         apply();
 
         if ($cb.length) {
             $cb.off('change.mypowerlyConsent').on('change.mypowerlyConsent', function() {
+                // Apply immediately so the button enables/disables right away.
+                apply();
                 if ($(this).is(':checked') && typeof window.persistAdminConsentIfNeeded === 'function') {
                     window.persistAdminConsentIfNeeded(function() {
                         apply();
                     });
-                    return;
                 }
-                apply();
             });
         }
     }
@@ -1370,6 +1618,12 @@ jQuery(document).ready(function($) {
     setupConsentGate('#mypowerly-consent-affiliates-sync', '#affiliates-sync');
     setupConsentGate('#mypowerly-consent-team-sync', '#team-sync');
     setupConsentGate('#mypowerly-consent-sync-all', '#sync-all-data');
+    setupConsentGate('#form-plugins-consent', '#sync-form-plugins-btn', '#form-sync-status');
+    setupConsentGate('#contractor-consent', '#sync-contractor-btn', '#contractor-sync-status');
+    setupConsentGate('#freelancer-contractor-consent', '#sync-freelancer-contractor-btn', '#freelancer-contractor-sync-status');
+    setupConsentGate('#accounting-bookkeeping-consent', '#sync-accounting-bookkeeping-btn', '#accounting-bookkeeping-sync-status');
+    setupConsentGate('#wallet-payout-consent', '#sync-wallet-payout-btn', '#wallet-payout-sync-status');
+    setupConsentGate('#ecommerce-consent', '#sync-ecommerce-btn', '#ecommerce-sync-status');
 
     $('#profile-sync').off('click.profileSync').on('click.profileSync', function() {
         if (!$('#mypowerly-consent-profile-sync').is(':checked')) {
@@ -2266,6 +2520,23 @@ jQuery(document).ready(function($) {
             }
         );
 
+        const $ecommerceConsent = $('#ecommerce-consent');
+        const $ecommerceBtn = $('#sync-ecommerce-btn');
+        const $ecommerceStatus = $('#ecommerce-sync-status');
+        gateConsent($ecommerceConsent, $ecommerceBtn, $ecommerceStatus);
+        bindSync(
+            $ecommerceBtn,
+            $ecommerceStatus,
+            'w91099ch_sync_ecommerce_plugins',
+            'ecommerce plugin data',
+            'Syncing ecommerce data...',
+            function(resp) {
+                const count = resp && resp.data ? (resp.data.synced_count || 0) : 0;
+                const total = resp && resp.data ? (resp.data.total_plugins || 0) : 0;
+                return 'Sync completed! ' + count + ' plugins, ' + total + ' active.';
+            }
+        );
+
         const $walletConsent = $('#wallet-payout-consent');
         const $walletBtn = $('#sync-wallet-payout-btn');
         const $walletStatus = $('#wallet-payout-sync-status');
@@ -2910,8 +3181,170 @@ jQuery(document).ready(function($) {
         refreshAffiliatesSyncButtonCount();
     });
 
+    // Form Plugin Sync Button Handler
+    $('#sync-form-plugins-btn').off('click.formSync').on('click.formSync', function() {
+        if (!$('#form-plugins-consent').is(':checked')) {
+            window.alert('Please check the consent checkbox to enable sending form plugin data to the external service.');
+            return;
+        }
+        if (!confirmSendToMypowerly('form plugin data')) {
+            return;
+        }
+        window.alert('Form plugin sync functionality will be implemented in a future update.');
+    });
 
+    // Contractor Sync Button Handler
+    $('#sync-contractor-btn').off('click.contractorSync').on('click.contractorSync', function() {
+        if (!$('#contractor-consent').is(':checked')) {
+            window.alert('Please check the consent checkbox to enable sending membership/subscription plugin data to the external service.');
+            return;
+        }
+        if (!confirmSendToMypowerly('membership/subscription plugin data')) {
+            return;
+        }
+        window.alert('Membership/subscription plugin sync functionality will be implemented in a future update.');
+    });
 
+    // Freelancer/Contractor Sync Button Handler
+    $('#sync-freelancer-contractor-btn').off('click.freelancerSync').on('click.freelancerSync', function() {
+        if (!$('#freelancer-contractor-consent').is(':checked')) {
+            window.alert('Please check the consent checkbox to enable sending freelancer/contractor plugin data to the external service.');
+            return;
+        }
+        if (!confirmSendToMypowerly('freelancer/contractor plugin data')) {
+            return;
+        }
+        window.alert('Freelancer/contractor plugin sync functionality will be implemented in a future update.');
+    });
+
+    // Accounting/Bookkeeping Sync Button Handler
+    $('#sync-accounting-bookkeeping-btn').off('click.accountingSync').on('click.accountingSync', function() {
+        if (!$('#accounting-bookkeeping-consent').is(':checked')) {
+            window.alert('Please check the consent checkbox to enable sending accounting/bookkeeping plugin data to the external service.');
+            return;
+        }
+        if (!confirmSendToMypowerly('accounting/bookkeeping plugin data')) {
+            return;
+        }
+        window.alert('Accounting/bookkeeping plugin sync functionality will be implemented in a future update.');
+    });
+
+    // Wallet/Payout Sync Button Handler
+    $('#sync-wallet-payout-btn').off('click.walletSync').on('click.walletSync', function() {
+        if (!$('#wallet-payout-consent').is(':checked')) {
+            window.alert('Please check the consent checkbox to enable sending wallet/payout plugin data to the external service.');
+            return;
+        }
+        if (!confirmSendToMypowerly('wallet/payout plugin data')) {
+            return;
+        }
+        window.alert('Wallet/payout plugin sync functionality will be implemented in a future update.');
+    });
+
+    // Ecommerce Sync Button Handler - handled by bindCardSyncButtons() above
+
+    // Load ecommerce plugins data on page load
+    function loadEcommercePlugins() {
+        const $tableBody = $('#ecommerce-table-body');
+        const $stats = $('#ecommerce-stats');
+        
+        if (!$tableBody.length) return;
+        
+        $tableBody.html('<tr><td colspan="4" style="padding: 20px; text-align: center; color: #666;">Loading ecommerce plugins...</td></tr>');
+        
+        const ajaxUrl = (typeof window.w91099chConnector !== 'undefined' && window.w91099chConnector && window.w91099chConnector.ajaxurl)
+            ? window.w91099chConnector.ajaxurl
+            : (typeof window.ajaxurl !== 'undefined' ? window.ajaxurl : '');
+        
+        const ajaxNonce = (typeof window.w91099chConnector !== 'undefined' && window.w91099chConnector && window.w91099chConnector.nonce)
+            ? window.w91099chConnector.nonce
+            : '';
+        
+        if (!ajaxUrl || !ajaxNonce) {
+            $tableBody.html('<tr><td colspan="4" style="padding: 20px; text-align: center; color: #dc3545;">Missing AJAX configuration. Please reload the page.</td></tr>');
+            return;
+        }
+        
+        $.ajax({
+            url: ajaxUrl,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'w91099ch_get_ecommerce_plugins',
+                nonce: ajaxNonce
+            },
+            success: function(response) {
+                if (response && response.success && response.data && response.data.plugins) {
+                    displayEcommercePlugins(response.data.plugins);
+                    if ($stats.length) {
+                        const count = Object.keys(response.data.plugins).length;
+                        $stats.text('Detected ' + count + ' ecommerce plugin' + (count !== 1 ? 's' : ''));
+                    }
+                } else {
+                    $tableBody.html('<tr><td colspan="4" style="padding: 20px; text-align: center; color: #666;">No ecommerce plugins detected</td></tr>');
+                    if ($stats.length) {
+                        $stats.text('No ecommerce plugins detected');
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                const msg = (xhr && xhr.responseText) ? xhr.responseText : (error || 'Failed to load ecommerce plugins');
+                $tableBody.html('<tr><td colspan="4" style="padding: 20px; text-align: center; color: #dc3545;">Error: ' + escapeHtml(msg) + '</td></tr>');
+            }
+        });
+    }
+    
+    function displayEcommercePlugins(plugins) {
+        const $tableBody = $('#ecommerce-table-body');
+        if (!$tableBody.length) return;
+        
+        if (!plugins || Object.keys(plugins).length === 0) {
+            $tableBody.html('<tr><td colspan="4" style="padding: 20px; text-align: center; color: #666;">No ecommerce plugins detected</td></tr>');
+            return;
+        }
+        
+        let html = '';
+        Object.keys(plugins).forEach(function(slug) {
+            const plugin = plugins[slug];
+            const name = escapeHtml(plugin.name || slug);
+            const version = escapeHtml(plugin.version || 'N/A');
+            const type = getEcommercePluginType(slug);
+            const isActive = plugin.active ? true : false;
+            const statusClass = isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+            const statusText = isActive ? 'ACTIVE' : 'INACTIVE';
+            
+            html += '<tr style="border-bottom: 1px solid #dee2e6;">'
+                + '<td style="padding: 8px;">' + name + '</td>'
+                + '<td style="padding: 8px;">' + version + '</td>'
+                + '<td style="padding: 8px;">' + type + '</td>'
+                + '<td style="padding: 8px;">'
+                + '<span class="status-badge ' + statusClass + '" style="padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600;">'
+                + statusText
+                + '</span>'
+                + '</td>'
+                + '</tr>';
+        });
+        
+        $tableBody.html(html);
+    }
+    
+    function getEcommercePluginType(slug) {
+        const types = {
+            'woocommerce': 'Store Platform',
+            'dokan': 'Marketplace',
+            'wcfm': 'Marketplace',
+            'stripe': 'Payment Gateway',
+            'paypal': 'Payment Gateway'
+        };
+        return types[slug] || 'Ecommerce';
+    }
+    
+    // Initialize ecommerce plugins on page load
+    if (typeof window.w91099chConnector !== 'undefined' && window.w91099chConnector.is_connected) {
+        setTimeout(function() {
+            loadEcommercePlugins();
+        }, 800);
+    }
 
 });
 

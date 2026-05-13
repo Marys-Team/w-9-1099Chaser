@@ -1572,12 +1572,6 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 				</div>
 			</div>
 		<?php endif; ?>
-
-		<div class="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 pb-12">
-			<div id="w9-top-anchor"></div>
-			<?php if ( $connection_error && ( ! $is_connected || empty( $credentials ) ) && ! $connection_success ) : ?>
-				<!-- Error Notice -->
-				<div class="mp-card mb-8 border-l-4 border-red-500">
 					<div class="p-6">
 						<div class="flex items-start gap-4">
 							<div class="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
@@ -1805,7 +1799,7 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 			</div>
 
 			<!-- Sync Cards Grid - Three Cards Per Row -->
-			<div class="mp-cards-grid grid grid-cols-1 md:grid-cols-3 gap-6">
+			<div class="mp-cards-grid grid grid-cols-1 md:grid-cols-3 gap-6 <?php echo ( ! $is_connected || empty( $credentials ) ) ? 'mp-cards-disabled' : ''; ?>">
 
 				<!-- Card 1: User Profile -->
 				<div class="mp-card mp-metric-card mp-metric-blue p-4 flex flex-col h-full">
@@ -3008,6 +3002,124 @@ $ab_detector         = new w91099ch_Accounting_Bookkeeping_Plugin_Detector();
 						</div>
 					</div>
 
+					<!-- Card 9: Ecommerce Data -->
+					<div class="mp-card mp-metric-card mp-metric-blue p-4 flex flex-col h-full">
+						<div class="mp-card-label">Ecommerce Data</div>
+						<div class="flex items-start justify-between gap-3 mb-3">
+							<div class="flex items-start gap-3">
+								<div class="w-12 h-12 rounded-xl mp-card-icon flex items-center justify-center">
+									<i class="fas fa-shopping-cart text-xl"></i>
+								</div>
+								<div>
+									<h3 class="text-base font-bold text-gray-800 mb-1">Ecommerce Data</h3>
+									<p class="text-sm text-gray-600">Detect and preview ecommerce plugins</p>
+								</div>
+							</div>
+
+							<div class="mp-help-tooltip">
+								<button type="button" class="mp-help-icon" aria-label="Ecommerce Data help">
+									<i class="fas fa-circle-question"></i>
+								</button>
+								<div class="mp-help-bubble">
+									<div class="mp-help-title">What this card does</div>
+									<div class="mp-help-line"><strong>Select Plugin:</strong> View detected ecommerce plugins.</div>
+									<div class="mp-help-line"><strong>Detection:</strong> WooCommerce, Dokan, WCFM, Stripe, PayPal + related plugins.</div>
+									<hr style="margin: 10px 0; border: none; border-top: 1px solid #e5e7eb;">
+									<div class="mp-help-title">Data that will be sent</div>
+									<div class="mp-help-line"><strong>Store Data:</strong> Store name, currency, settings</div>
+									<div class="mp-help-line"><strong>Product Info:</strong> Product catalog, pricing, inventory</div>
+									<div class="mp-help-line"><strong>Order Data:</strong> Order history, customer information, payment methods</div>
+								</div>
+							</div>
+						</div>
+
+						<?php
+						// Ensure ecommerce plugin detector is loaded
+						if (!class_exists('w91099ch_Ecommerce_Plugin_Detector')) {
+							require_once w91099ch_PLUGIN_PATH . 'includes/ecommerce-plugin-detector-init.php';
+						}
+
+						$ecommerce_detector = new w91099ch_Ecommerce_Plugin_Detector();
+						$detected_ecommerce_plugins = $ecommerce_detector->get_ecommerce_plugins_data();
+						?>
+
+						<div class="mb-4" style="flex: 1;">
+							<div class="flex items-center justify-between mb-3">
+								<label class="block text-sm font-medium text-gray-700">Select Plugin</label>
+								<span class="text-xs text-gray-500">Filter by plugin</span>
+							</div>
+							<div class="relative mb-4">
+								<select id="ecommerce-plugin-select" class="mp-input mp-select">
+									<option value="" selected>All Ecommerce Plugins</option>
+									<?php if ( ! empty( $detected_ecommerce_plugins ) ) : ?>
+										<?php foreach ( $detected_ecommerce_plugins as $slug => $plugin ) : ?>
+											<option value="<?php echo esc_attr( $slug ); ?>">
+												<?php echo esc_html( $plugin['name'] ); ?>
+											</option>
+										<?php endforeach; ?>
+									<?php endif; ?>
+								</select>
+							</div>
+
+							<div class="bg-gray-50 rounded-xl p-4">
+								<div class="flex justify-between items-center mb-4">
+									<h5 class="font-bold text-gray-800">Ecommerce Preview</h5>
+									<div id="ecommerce-stats" class="text-sm text-gray-600">
+										<?php if ( ! empty( $detected_ecommerce_plugins ) ) : ?>
+											<?php 
+											$total_plugins = count( $detected_ecommerce_plugins );
+											echo esc_html( "Detected {$total_plugins} ecommerce plugins" ); 
+											?>
+										<?php else : ?>
+											<?php echo esc_html( 'No ecommerce plugins detected' ); ?>
+										<?php endif; ?>
+									</div>
+								</div>
+
+								<div class="mp-scroll bg-white rounded-lg overflow-hidden border border-gray-200 max-h-64 overflow-y-auto overflow-x-auto">
+									<table class="mp-table min-w-full">
+										<thead>
+											<tr>
+												<th class="whitespace-nowrap">Plugin Name</th>
+												<th class="whitespace-nowrap">Version</th>
+												<th class="whitespace-nowrap">Type</th>
+												<th class="whitespace-nowrap">Status</th>
+											</tr>
+										</thead>
+										<tbody id="ecommerce-table-body">
+											<tr>
+												<td colspan="4" class="py-8 text-center text-gray-500">
+													<div class="flex flex-col items-center justify-center">
+														<i class="fas fa-shopping-cart text-3xl text-gray-300 mb-3"></i>
+														<p>Loading ecommerce data...</p>
+													</div>
+												</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+
+						<div class="space-y-3 mt-auto">
+							<div class="p-3 bg-blue-50 rounded-lg border border-blue-200 flex items-start gap-3">
+								<input type="checkbox" id="ecommerce-consent" class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded" />
+								<div class="flex-1 text-sm text-gray-700">
+									<p class="font-semibold text-gray-900">Consent required</p>
+									<p class="text-gray-700">I understand that clicking <strong>Sync Ecommerce Data</strong> will send ecommerce plugin data to the external Mypowerly service (<code>https://mypowerly.com</code>). No data is stored in WordPress.</p>
+								</div>
+							</div>
+
+							<button type="button" id="sync-ecommerce-btn" class="mp-btn-primary w-full flex items-center justify-center gap-3 opacity-60 cursor-not-allowed" disabled>
+								<i class="fas fa-rotate"></i>
+								Sync Ecommerce Data
+							</button>
+							<div class="mt-2 text-xs text-gray-500 text-center">
+								<span id="ecommerce-sync-status">Check consent to enable sync</span>
+							</div>
+						</div>
+					</div>
+
 					<div class="mp-card mp-metric-card mp-metric-orange p-4 flex flex-col h-full">
 						<div class="mp-card-label">Payout / Wallet Plugins</div>
 						<div class="flex items-start justify-between gap-3 mb-3">
@@ -3732,7 +3844,6 @@ $wp_detector         = new w91099ch_Wallet_Payout_Plugin_Detector();
 		<?php endif; ?>
 
 	</div>
-</div>
 
 <!-- Simple Government Form Button Handler -->
 <script>
@@ -3938,15 +4049,19 @@ jQuery(document).ready(function($) {
 		return window.confirm('Are you sure you want to send ' + label + ' to Mypowerly?');
 	}
 
-	function setupConsentGate(checkboxSelector, buttonSelector) {
+	function setupConsentGate(checkboxSelector, buttonSelector, statusSelector) {
 		const $cb = $(checkboxSelector);
 		const $btn = $(buttonSelector);
+		const $status = statusSelector ? $(statusSelector) : null;
 		if (!$btn.length) return;
 
 		const apply = function() {
 			const ok = $cb.length && $cb.is(':checked');
 			$btn.prop('disabled', !ok);
 			$btn.toggleClass('opacity-60 cursor-not-allowed', !ok);
+			if ($status && $status.length) {
+				$status.text(ok ? 'Ready to sync' : 'Check consent to enable sync');
+			}
 		};
 
 		apply();
@@ -3975,6 +4090,7 @@ jQuery(document).ready(function($) {
 	setupConsentGate('#freelancer-contractor-consent', '#sync-freelancer-contractor-btn');
 	setupConsentGate('#accounting-bookkeeping-consent', '#sync-accounting-bookkeeping-btn');
 	setupConsentGate('#contractor-consent', '#sync-contractor-btn');
+	setupConsentGate('#ecommerce-consent', '#sync-ecommerce-btn', '#ecommerce-sync-status');
 
 	$('#plugin-sync').off('click.pluginSync').on('click.pluginSync', function() {
 		if (!$('#mypowerly-consent-plugin-sync').is(':checked')) {
