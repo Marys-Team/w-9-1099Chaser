@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -1571,6 +1571,7 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 					</div>
 				</div>
 			</div>
+		<?php endif; ?>
 
 
 			<!-- Sync Cards Grid - Three Cards Per Row -->
@@ -3012,8 +3013,8 @@ $ab_detector         = new w91099ch_Accounting_Bookkeeping_Plugin_Detector();
 				</div>
 			</div>
 
-		<?php else  : ?>
-		<!-- Not Connected State -->
+		<?php
+			<!-- Not Connected State -->
 
 			<?php if ( ! empty( $enc_param ) ) : ?>
 				<!-- Connection Progress -->

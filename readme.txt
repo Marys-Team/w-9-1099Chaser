@@ -731,8 +731,6 @@ Q14: What Google permissions does the plugin need?
 
 = 1.0.5 =
 Major update with automatic webhook integration, External Connect API, enhanced security, and comprehensive testing tools. Existing connections will be automatically upgraded to use the new webhook system.
-= 1.0.11 =
-* Version bump to 1.0.11.
 = 1.0.10 =
 * Version bump to 1.0.10.
 = 1.0.9 =

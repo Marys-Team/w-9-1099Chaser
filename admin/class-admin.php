@@ -1063,8 +1063,8 @@ startxref
 			wp_send_json_error( array( 'message' => esc_html__( 'Insufficient permissions', 'w9-1099-chaser' ) ) );
 		}
 
-		$rating = isset( $_POST['rating'] ) ? absint( $_POST['rating'] ) : 0;
-		$message = isset( $_POST['message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['message'] ) ) : '';
+		$rating      = isset( $_POST['rating'] ) ? absint( $_POST['rating'] ) : 0;
+		$message     = isset( $_POST['message'] ) ? sanitize_textarea_field( wp_unslash( $_POST['message'] ) ) : '';
 		$website_url = home_url();
 		$plugin_name = 'W9-1099 Chaser';
 
@@ -1072,93 +1072,125 @@ startxref
 			wp_send_json_error( array( 'message' => esc_html__( 'Please provide a star rating.', 'w9-1099-chaser' ) ) );
 		}
 
-		$to      = '1099automation@gmail.com';
-		$subject = sprintf( 'Experience Feedback: %s (%d Stars)', $plugin_name, $rating );
-		
 		$admin_email = sanitize_email( (string) get_option( 'admin_email' ) );
 		$site_name   = get_bloginfo( 'name' );
 		$wp_version  = get_bloginfo( 'version' );
 
-		// Professional HTML Email Format for Experience Feedback
-		$html_body = '<html><body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">';
-		$html_body .= '<div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 8px; background-color: #f9f9f9;">';
-		$html_body .= '<h2 style="color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 10px;">New Experience Feedback</h2>';
-		$html_body .= '<p>You have received new feedback for <strong>' . esc_html( $plugin_name ) . '</strong>. Here are the details:</p>';
-		
-		$html_body .= '<div style="background: #fff; padding: 15px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 20px; text-align: center;">';
-		$html_body .= '<div style="font-size: 14px; color: #666; margin-bottom: 5px;">Rating Given</div>';
-		$stars_html = str_repeat( '<span style="color: #f59e0b; font-size: 24px;">★</span>', $rating ) . str_repeat( '<span style="color: #d1d5db; font-size: 24px;">★</span>', 5 - $rating );
-		$html_body .= '<div>' . $stars_html . ' (' . $rating . '/5)</div>';
-		$html_body .= '</div>';
-
-		$html_body .= '<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">';
-		if ( ! empty( $message ) ) {
-			$html_body .= '<tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; vertical-align: top; width: 30%;">Message:</td><td style="padding: 10px; border-bottom: 1px solid #eee;">' . nl2br( esc_html( $message ) ) . '</td></tr>';
+		// ── Always save to DB first so no feedback is ever lost ──────────────
+		$stored = get_option( 'w91099ch_feedback_log', array() );
+		if ( ! is_array( $stored ) ) {
+			$stored = array();
 		}
-		$html_body .= '<tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Site Name:</td><td style="padding: 10px; border-bottom: 1px solid #eee;">' . esc_html( $site_name ) . '</td></tr>';
-		$html_body .= '<tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Site URL:</td><td style="padding: 10px; border-bottom: 1px solid #eee;"><a href="' . esc_url( $website_url ) . '">' . esc_html( $website_url ) . '</a></td></tr>';
-		$html_body .= '<tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Admin Email:</td><td style="padding: 10px; border-bottom: 1px solid #eee;">' . esc_html( $admin_email ) . '</td></tr>';
-		$html_body .= '<tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">WP Version:</td><td style="padding: 10px; border-bottom: 1px solid #eee;">' . esc_html( $wp_version ) . '</td></tr>';
-		$html_body .= '<tr><td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold;">Date:</td><td style="padding: 10px; border-bottom: 1px solid #eee;">' . esc_html( current_time( 'mysql' ) ) . '</td></tr>';
-		$html_body .= '</table>';
-		
-		$html_body .= '<p style="font-size: 12px; color: #777; text-align: center; margin-top: 30px;">This feedback was submitted via the in-plugin feedback tab.</p>';
-		$html_body .= '</div></body></html>';
+		$log_entry = array(
+			'rating'       => $rating,
+			'message'      => $message,
+			'site'         => $website_url,
+			'site_name'    => $site_name,
+			'admin_email'  => $admin_email,
+			'wp_version'   => $wp_version,
+			'date'         => current_time( 'mysql' ),
+			'delivered'    => false,
+		);
+		$stored[] = $log_entry;
+		update_option( 'w91099ch_feedback_log', array_slice( $stored, -50 ) );
 
-		$from_name   = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+		// ── Method 1: POST to Mypowerly feedback endpoint ────────────────────
+		// This bypasses server mail entirely — the Mypowerly backend sends
+		// the notification email from its own trusted mail infrastructure.
+		$delivered   = false;
+		$api_payload = array(
+			'source'       => 'wp_plugin_feedback',
+			'plugin'       => $plugin_name,
+			'rating'       => $rating,
+			'message'      => $message,
+			'site_url'     => $website_url,
+			'site_name'    => $site_name,
+			'admin_email'  => $admin_email,
+			'wp_version'   => $wp_version,
+			'notify_email' => '1099automation@gmail.com',
+			'submitted_at' => current_time( 'mysql' ),
+		);
 
-		$sent = false;
-		$err_msg = '';
-		try {
-			if ( ! class_exists( '\\PHPMailer\\PHPMailer\\PHPMailer' ) ) {
-				require_once ABSPATH . WPINC . '/PHPMailer/PHPMailer.php';
-				require_once ABSPATH . WPINC . '/PHPMailer/SMTP.php';
-				require_once ABSPATH . WPINC . '/PHPMailer/Exception.php';
+		$api_response = wp_remote_post(
+			'https://mypowerly.com/api/plugin-feedback/',
+			array(
+				'headers'   => array(
+					'Content-Type' => 'application/json',
+					'Accept'       => 'application/json',
+					'User-Agent'   => 'w91099ch-WordPress/' . (string) get_bloginfo( 'version' ),
+				),
+				'body'      => wp_json_encode( $api_payload ),
+				'timeout'   => 15,
+				'sslverify' => true,
+			)
+		);
+
+		if ( ! is_wp_error( $api_response ) ) {
+			$api_code = (int) wp_remote_retrieve_response_code( $api_response );
+			if ( $api_code >= 200 && $api_code < 300 ) {
+				$delivered = true;
 			}
-
-			$mailer = new \PHPMailer\PHPMailer\PHPMailer( true );
-			$mailer->isMail();
-			$mailer->CharSet = 'UTF-8';
-			$mailer->Subject = $subject;
-			$mailer->Body    = $html_body;
-			$mailer->isHTML( true );
-			$mailer->addAddress( $to );
-			if ( $admin_email ) {
-				$mailer->setFrom( $admin_email, $from_name, false );
-				$mailer->addReplyTo( $admin_email, $from_name );
-			}
-			$sent = (bool) $mailer->send();
-		} catch ( Exception $e ) {
-			$err_msg = $e->getMessage();
-		} catch ( \PHPMailer\PHPMailer\Exception $e ) {
-			$err_msg = $e->getMessage();
-		} catch ( \Throwable $e ) {
-			$err_msg = $e->getMessage();
 		}
 
-		if ( $sent ) {
-			wp_send_json_success( array( 'message' => esc_html__( 'Thank you for your feedback!', 'w9-1099-chaser' ) ) );
-		} else {
-			error_log( 'w91099ch: Feedback email failed. Site: ' . $website_url . ' | Rating: ' . (string) $rating . ( $err_msg ? ( ' | Error: ' . $err_msg ) : '' ) );
+		// ── Method 2: wp_mail fallback (plain-text, no custom From) ──────────
+		// Plain-text with no custom From header is the most deliverable
+		// option for server mail — avoids SPF/DKIM issues.
+		if ( ! $delivered ) {
+			$stars_text  = str_repeat( '★', $rating ) . str_repeat( '☆', 5 - $rating );
+			$plain_body  = "New plugin feedback received.\n\n";
+			$plain_body .= "Plugin : {$plugin_name}\n";
+			$plain_body .= "Rating : {$stars_text} ({$rating}/5)\n";
+			if ( ! empty( $message ) ) {
+				$plain_body .= "Message: {$message}\n";
+			}
+			$plain_body .= "\nSite   : {$website_url}\n";
+			$plain_body .= "Name   : {$site_name}\n";
+			$plain_body .= "Email  : {$admin_email}\n";
+			$plain_body .= "WP     : {$wp_version}\n";
+			$plain_body .= "Date   : " . current_time( 'mysql' ) . "\n";
 
-			$response = array( 'message' => esc_html__( 'Failed to send feedback. Please try again later.', 'w9-1099-chaser' ) );
-			if ( $err_msg ) {
-				$err_lower = strtolower( $err_msg );
-				if (
-					false !== strpos( $err_lower, 'gmail.googleapis.com' ) ||
-					false !== strpos( $err_lower, 'googleapis.com' ) ||
-					false !== strpos( $err_lower, 'unauthenticated' ) ||
-					false !== strpos( $err_lower, 'login required' ) ||
-					false !== strpos( $err_lower, 'oauth 2' )
-				) {
-					$response['message'] = esc_html__( 'Email service is not authenticated (WP Mail SMTP / Gmail). Please reconnect your mailer in WP Mail SMTP settings and try again.', 'w9-1099-chaser' );
+			$err_msg            = '';
+			$mail_error_handler = function ( $wp_error ) use ( &$err_msg ) {
+				if ( is_wp_error( $wp_error ) ) {
+					$err_msg = $wp_error->get_error_message();
 				}
+			};
+			add_action( 'wp_mail_failed', $mail_error_handler );
+
+			// No custom From — let WordPress/server use its default sender.
+			$mail_sent = wp_mail(
+				'1099automation@gmail.com',
+				sprintf( '[%s] Feedback: %d Stars', $plugin_name, $rating ),
+				$plain_body
+			);
+
+			remove_action( 'wp_mail_failed', $mail_error_handler );
+
+			if ( $mail_sent ) {
+				$delivered = true;
+			} else {
+				// Method 3: send to site admin as last resort so someone gets it.
+				if ( $admin_email && $admin_email !== '1099automation@gmail.com' ) {
+					wp_mail(
+						$admin_email,
+						sprintf( '[%s] Feedback (copy): %d Stars', $plugin_name, $rating ),
+						$plain_body
+					);
+				}
+				error_log( 'w91099ch: Feedback delivery failed. Site: ' . $website_url . ' | Rating: ' . (string) $rating . ( $err_msg ? ' | Error: ' . $err_msg : '' ) );
 			}
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG && $err_msg ) {
-				$response['debug'] = sanitize_text_field( $err_msg );
-			}
-			wp_send_json_error( $response );
 		}
+
+		// Update the log entry with delivery status.
+		$stored = get_option( 'w91099ch_feedback_log', array() );
+		if ( is_array( $stored ) && ! empty( $stored ) ) {
+			$last = count( $stored ) - 1;
+			$stored[ $last ]['delivered'] = $delivered;
+			update_option( 'w91099ch_feedback_log', $stored );
+		}
+
+		// Always return success — feedback is saved in DB regardless.
+		wp_send_json_success( array( 'message' => esc_html__( 'Thank you for your feedback!', 'w9-1099-chaser' ) ) );
 	}
 
 	public function ajax_save_w9_display_settings() {

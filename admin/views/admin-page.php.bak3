@@ -1571,6 +1571,7 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 					</div>
 				</div>
 			</div>
+		<?php endif; ?>
 
 
 			<!-- Sync Cards Grid - Three Cards Per Row -->
