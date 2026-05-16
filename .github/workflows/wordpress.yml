@@ -91,6 +91,7 @@ jobs:
             --exclude='.git' \
             --exclude='.github' \
             --exclude='build' \
+            --exclude='build-wp' \
             --exclude='*.zip' \
             ./ build/
 
