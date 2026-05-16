@@ -4,7 +4,7 @@ Tags: W9, 1099, affiliate, tax compliance, vendor management, onboarding, contra
 Requires at least: 5.8
 Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 1.0.11
+Stable tag: 1.0.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -692,6 +692,30 @@ Q14: What Google permissions does the plugin need?
 8. Final result
 
 == Changelog ==
+
+= 1.0.12 =
+* Fix: Corrected SVN deployment to ensure latest code is reflected on WordPress.org.
+* Fix: Cleaned up changelog ordering for WordPress.org compatibility.
+
+= 1.0.11 =
+* Updated plugin compatibility and stability improvements.
+* Added missing changelog entries for WordPress.org visibility.
+
+= 1.0.10 =
+* Version bump to 1.0.10.
+
+= 1.0.9 =
+* Updated plugin compatibility and stability improvements.
+
+= 1.0.8 =
+* Updated plugin compatibility and stability improvements.
+
+= 1.0.7 =
+* Updated.
+
+= 1.0.6 =
+* Updated.
+
 = 1.0.5 =
 * **NEW**: Automatic webhook integration with MyPowerly platform
 * **NEW**: External Connect API for enhanced security and reliability
@@ -712,38 +736,44 @@ Q14: What Google permissions does the plugin need?
 * Updated readme with comprehensive feature descriptions and FAQ
 * Removed IRS dependencies for standalone PDF generation
 * Enhanced privacy disclosures and service descriptions
+
 = 1.0.4 =
 * Bugfix: ensure the W-9 admin sync button triggers the sync handler.
+
 = 1.0.3 =
+* Stability improvements.
+
 = 1.0.2 =
- * Documentation and packaging fixes.
+* Documentation and packaging fixes.
 
 = 1.0.1 =
- * Documentation and disclosure updates.
+* Documentation and disclosure updates.
 
 = 1.0.0 =
- * Initial release.
-
-= 1.0.2 =
- Documentation and packaging fixes.
-
-= 1.0.11 =
-* Updated plugin compatibility and stability improvements.
+* Initial release.
 
 == Upgrade Notice ==
+
+= 1.0.12 =
+Fix: SVN deployment correction. Update recommended.
 
 = 1.0.11 =
 Updated plugin compatibility and stability improvements.
 
+= 1.0.10 =
+Version bump to 1.0.10.
+
+= 1.0.9 =
+Updated plugin compatibility and stability improvements.
+
+= 1.0.8 =
+Updated plugin compatibility and stability improvements.
+
+= 1.0.7 =
+Updated.
+
+= 1.0.6 =
+Updated.
+
 = 1.0.5 =
 Major update with automatic webhook integration, External Connect API, enhanced security, and comprehensive testing tools. Existing connections will be automatically upgraded to use the new webhook system.
-= 1.0.10 =
-* Version bump to 1.0.10.
-= 1.0.9 =
-* Updated plugin compatibility and stability improvements.
-= 1.0.8 =
-* Updated plugin compatibility and stability improvements.
-= 1.0.7 =
-Updated
-= 1.0.6 =
-Updated

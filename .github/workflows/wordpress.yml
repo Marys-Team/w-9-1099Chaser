@@ -102,8 +102,12 @@ jobs:
           SLUG: w9-1099-chaser
           BUILD_DIR: ./build
           VERSION: ${{ steps.version.outputs.version }}
+          GENERATE_ZIP: false
 
       - name: Deployment success
         run: |
           echo "Plugin deployed to WordPress.org"
+          echo "Version: ${{ steps.version.outputs.version }}"
           echo "View at: https://wordpress.org/plugins/w9-1099-chaser/"
+          echo "SVN trunk: https://plugins.svn.wordpress.org/w9-1099-chaser/trunk/"
+          echo "SVN tag: https://plugins.svn.wordpress.org/w9-1099-chaser/tags/${{ steps.version.outputs.version }}/"
