@@ -1700,12 +1700,18 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 
 						<div class="hidden" id="profile-sync-results">
 							<div class="p-4 bg-green-50 rounded-xl border border-green-200">
-								<div class="flex items-center justify-between">
+								<div class="flex items-center justify-between mb-3">
 									<div class="flex items-center gap-3">
 										<i class="fas fa-circle-check text-green-600"></i>
 										<span class="font-medium text-gray-800">Profile synced successfully!</span>
 									</div>
 									<span class="text-sm text-gray-600">Time: <span id="profile-sync-duration" class="font-medium">0s</span></span>
+								</div>
+								<div class="text-center">
+									<a href="https://mypowerly.com" target="_blank" rel="noopener noreferrer" class="mp-btn-primary inline-flex items-center gap-2" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); font-size: 13px; padding: 8px 16px;">
+										<i class="fas fa-external-link-alt"></i>
+										Go to Mypowerly & See Your Data
+									</a>
 								</div>
 							</div>
 						</div>

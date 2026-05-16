@@ -99,9 +99,272 @@ jQuery(document).ready(function($) {
         }
     }
 
+    /**
+     * Check if user is connected to Mypowerly
+     * Shows a styled alert if not connected
+     * @returns {boolean} true if connected, false otherwise
+     */
+    function checkMypowerlyConnection() {
+        const isConnected = !!(window.w91099chConnector && window.w91099chConnector.is_connected);
+        
+        if (!isConnected) {
+            // Check if we're on the Advanced Features page
+            const isAdvancedFeaturesPage = window.location.href.indexOf('page=w91099ch-advanced-features') !== -1;
+            
+            // Create a styled modal alert with clear instructions
+            const alertHtml = ''
+                + '<div id="mp-connection-alert-overlay" style="'
+                +   'position:fixed;top:0;left:0;right:0;bottom:0;'
+                +   'background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);'
+                +   'z-index:99999;display:flex;align-items:center;justify-content:center;'
+                +   'animation:fadeIn 0.2s ease;">'
+                + '<div style="'
+                +   'background:#fff;border-radius:20px;padding:0;max-width:560px;width:90%;'
+                +   'box-shadow:0 25px 50px rgba(0,0,0,0.3);overflow:hidden;'
+                +   'animation:slideUp 0.3s ease;">'
+                
+                // Header with gradient
+                + '<div style="'
+                +   'background:linear-gradient(135deg,#dc2626,#ef4444);'
+                +   'padding:28px 32px;text-align:center;position:relative;">'
+                + '<div style="'
+                +   'width:72px;height:72px;margin:0 auto 16px;'
+                +   'background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);'
+                +   'border-radius:50%;display:flex;align-items:center;justify-content:center;'
+                +   'border:3px solid rgba(255,255,255,0.3);">'
+                + '<i class="fas fa-plug-circle-xmark" style="font-size:36px;color:#fff;"></i>'
+                + '</div>'
+                + '<h3 style="margin:0;font-size:26px;font-weight:800;color:#fff;letter-spacing:-0.02em;">Connection Required</h3>'
+                + '</div>'
+                
+                // Body with instructions
+                + '<div style="padding:32px;">'
+                + '<div style="'
+                +   'background:linear-gradient(135deg,#fef3c7,#fde68a);'
+                +   'border-left:4px solid #f59e0b;padding:20px;border-radius:12px;margin-bottom:24px;">'
+                + '<p style="margin:0 0 12px;font-size:16px;font-weight:700;color:#92400e;">'
+                + '<i class="fas fa-exclamation-triangle" style="margin-right:8px;"></i>Feature Not Available'
+                + '</p>'
+                + '<p style="margin:0;font-size:14px;color:#78350f;line-height:1.6;">'
+                + 'This feature requires an active connection to <strong>Mypowerly</strong>. '
+                + 'Please connect your site to unlock all sync and data management features.'
+                + '</p>'
+                + '</div>'
+                
+                // Instructions box - different for Advanced Features page
+                + '<div style="'
+                +   'background:#f8fafc;border:2px solid #e2e8f0;'
+                +   'padding:20px;border-radius:12px;margin-bottom:24px;">'
+                + '<p style="margin:0 0 16px;font-size:15px;font-weight:700;color:#1e293b;">'
+                + '<i class="fas fa-list-check" style="margin-right:8px;color:#4f46e5;"></i>How to Connect:'
+                + '</p>'
+                + (isAdvancedFeaturesPage 
+                    ? '<ol style="margin:0;padding-left:20px;font-size:14px;color:#475569;line-height:1.8;">'
+                    + '<li style="margin-bottom:8px;">Click <strong>"Go to Dashboard and Connect"</strong> button below</li>'
+                    + '<li style="margin-bottom:8px;">You will be redirected to the main Dashboard</li>'
+                    + '<li style="margin-bottom:8px;">Check the consent checkbox to agree to sync your data</li>'
+                    + '<li style="margin-bottom:0;">Click <strong>"Connect to Mypowerly"</strong> to establish connection</li>'
+                    + '</ol>'
+                    : '<ol style="margin:0;padding-left:20px;font-size:14px;color:#475569;line-height:1.8;">'
+                    + '<li style="margin-bottom:8px;">Scroll down to the <strong>"Connect to Mypowerly"</strong> section</li>'
+                    + '<li style="margin-bottom:8px;">Check the consent checkbox to agree to sync your data</li>'
+                    + '<li style="margin-bottom:8px;">Click the <strong>"Connect to Mypowerly"</strong> button</li>'
+                    + '<li style="margin-bottom:0;">Once connected, all features will be unlocked</li>'
+                    + '</ol>')
+                + '</div>'
+                
+                // Benefits box
+                + '<div style="'
+                +   'background:linear-gradient(135deg,#eff6ff,#dbeafe);'
+                +   'border:1px solid #bfdbfe;padding:16px;border-radius:10px;margin-bottom:24px;">'
+                + '<p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#1e40af;">'
+                + '<i class="fas fa-sparkles" style="margin-right:6px;"></i>What You\'ll Get:'
+                + '</p>'
+                + '<ul style="margin:0;padding-left:20px;font-size:13px;color:#1e40af;line-height:1.6;">'
+                + '<li>Sync profile, plugins, affiliates, and team data</li>'
+                + '<li>Manage W-9/1099 forms and vendor information</li>'
+                + '<li>Access advanced reporting and analytics</li>'
+                + '</ul>'
+                + '</div>'
+                
+                // Action buttons - different for Advanced Features page
+                + '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">'
+                + '<button id="mp-alert-close" style="'
+                +   'padding:14px 28px;background:#fff;color:#64748b;'
+                +   'border:2px solid #e2e8f0;border-radius:12px;'
+                +   'font-size:15px;font-weight:600;cursor:pointer;'
+                +   'transition:all 0.2s ease;"'
+                +   'onmouseover="this.style.background=\'#f8fafc\';this.style.borderColor=\'#cbd5e1\';"'
+                +   'onmouseout="this.style.background=\'#fff\';this.style.borderColor=\'#e2e8f0\';">'
+                + '<i class="fas fa-times" style="margin-right:8px;"></i>Cancel</button>'
+                + '<button id="mp-alert-connect" style="'
+                +   'padding:14px 32px;background:linear-gradient(135deg,#4f46e5,#7c3aed);'
+                +   'color:#fff;border:none;border-radius:12px;'
+                +   'font-size:15px;font-weight:700;cursor:pointer;'
+                +   'box-shadow:0 4px 14px rgba(79,70,229,0.4);'
+                +   'transition:all 0.2s ease;"'
+                +   'onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 20px rgba(79,70,229,0.5)\';"'
+                +   'onmouseout="this.style.transform=\'translateY(0)\';this.style.boxShadow=\'0 4px 14px rgba(79,70,229,0.4)\';">'
+                + '<i class="fas fa-' + (isAdvancedFeaturesPage ? 'arrow-right' : 'plug') + '" style="margin-right:8px;"></i>'
+                + (isAdvancedFeaturesPage ? 'Go to Dashboard and Connect' : 'Go to Connection Section')
+                + '</button>'
+                + '</div>'
+                + '</div>'
+                + '</div>'
+                + '</div>';
+            
+            // Add CSS animations
+            const styleTag = '<style>'
+                + '@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }'
+                + '@keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }'
+                + '</style>';
+            
+            $('body').append(styleTag + alertHtml);
+            
+            // Close button handler
+            $('#mp-alert-close').on('click', function() {
+                $('#mp-connection-alert-overlay').fadeOut(200, function() {
+                    $(this).remove();
+                });
+            });
+            
+            // Connect button handler
+            $('#mp-alert-connect').on('click', function() {
+                $('#mp-connection-alert-overlay').fadeOut(200, function() {
+                    $(this).remove();
+                });
+                
+                if (isAdvancedFeaturesPage) {
+                    // Redirect to Dashboard page with scroll parameter
+                    const dashboardUrl = window.location.href.replace('page=w91099ch-advanced-features', 'page=w91099ch') + '&scroll_to_connect=1';
+                    window.location.href = dashboardUrl;
+                } else {
+                    // Scroll to connect block if it exists on current page
+                    const $connectBlock = $('#mypowerly-connect-block');
+                    if ($connectBlock.length) {
+                        $('html, body').animate({
+                            scrollTop: $connectBlock.offset().top - 80
+                        }, 600, 'swing');
+                        
+                        // Highlight the connect block with pulsing effect
+                        $connectBlock.css({
+                            'box-shadow': '0 0 0 4px rgba(79, 70, 229, 0.4)',
+                            'transition': 'box-shadow 0.3s ease',
+                            'border-left-color': '#4f46e5'
+                        });
+                        
+                        // Pulse effect
+                        let pulseCount = 0;
+                        const pulseInterval = setInterval(function() {
+                            pulseCount++;
+                            if (pulseCount % 2 === 0) {
+                                $connectBlock.css('box-shadow', '0 0 0 4px rgba(79, 70, 229, 0.4)');
+                            } else {
+                                $connectBlock.css('box-shadow', '0 0 0 8px rgba(79, 70, 229, 0.2)');
+                            }
+                            
+                            if (pulseCount >= 6) {
+                                clearInterval(pulseInterval);
+                                setTimeout(function() {
+                                    $connectBlock.css({
+                                        'box-shadow': '',
+                                        'border-left-color': ''
+                                    });
+                                }, 500);
+                            }
+                        }, 300);
+                    } else {
+                        // If connect block not found, scroll to top
+                        $('html, body').animate({ scrollTop: 0 }, 600);
+                        alert('Please scroll down to find the "Connect to Mypowerly" section.');
+                    }
+                }
+            });
+            
+            // Close on overlay click
+            $('#mp-connection-alert-overlay').on('click', function(e) {
+                if (e.target.id === 'mp-connection-alert-overlay') {
+                    $(this).fadeOut(200, function() {
+                        $(this).remove();
+                    });
+                }
+            });
+            
+            // Close on ESC key
+            $(document).on('keydown.mpAlert', function(e) {
+                if (e.key === 'Escape' || e.keyCode === 27) {
+                    $('#mp-connection-alert-overlay').fadeOut(200, function() {
+                        $(this).remove();
+                    });
+                    $(document).off('keydown.mpAlert');
+                }
+            });
+            
+            return false;
+        }
+        
+        return true;
+    }
+
     window.persistAdminConsentIfNeeded = persistAdminConsentIfNeeded;
     window.updateAffiliatesSyncButtonCount = updateAffiliatesSyncButtonCount;
     window.updateCardsDisabledState = updateCardsDisabledState;
+
+    // ── Handle scroll to connect section from Advanced Features page ──
+    (function handleScrollToConnect() {
+        // Check if URL has scroll_to_connect parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('scroll_to_connect') === '1') {
+            // Wait for page to fully load
+            $(window).on('load', function() {
+                setTimeout(function() {
+                    const $connectBlock = $('#mypowerly-connect-block');
+                    if ($connectBlock.length) {
+                        // Scroll to connect block
+                        $('html, body').animate({
+                            scrollTop: $connectBlock.offset().top - 80
+                        }, 800, 'swing');
+                        
+                        // Highlight with pulsing effect
+                        $connectBlock.css({
+                            'box-shadow': '0 0 0 4px rgba(79, 70, 229, 0.4)',
+                            'transition': 'box-shadow 0.3s ease',
+                            'border-left-color': '#4f46e5',
+                            'border-left-width': '6px'
+                        });
+                        
+                        // Enhanced pulse effect
+                        let pulseCount = 0;
+                        const pulseInterval = setInterval(function() {
+                            pulseCount++;
+                            if (pulseCount % 2 === 0) {
+                                $connectBlock.css('box-shadow', '0 0 0 4px rgba(79, 70, 229, 0.4)');
+                            } else {
+                                $connectBlock.css('box-shadow', '0 0 0 10px rgba(79, 70, 229, 0.15)');
+                            }
+                            
+                            if (pulseCount >= 8) {
+                                clearInterval(pulseInterval);
+                                setTimeout(function() {
+                                    $connectBlock.css({
+                                        'box-shadow': '',
+                                        'border-left-color': '',
+                                        'border-left-width': ''
+                                    });
+                                }, 500);
+                            }
+                        }, 350);
+                        
+                        // Remove the parameter from URL without reloading
+                        if (window.history && window.history.replaceState) {
+                            const newUrl = window.location.href.replace(/[&?]scroll_to_connect=1/, '');
+                            window.history.replaceState({}, document.title, newUrl);
+                        }
+                    }
+                }, 500);
+            });
+        }
+    })();
 
     // ── Auto-sync on connect ──────────────────────────────────────────────────
     // If the user had "auto sync after connection" checked and we just landed
@@ -185,10 +448,22 @@ jQuery(document).ready(function($) {
             + '<div id="mp-auto-sync-duration" style="font-size:22px;font-weight:700;color:#1e293b;">0s</div>'
             + '</div>'
             + '</div>'
-            + '<div style="margin-top:20px;text-align:center;">'
+            + '<div style="margin-top:20px;text-align:center;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">'
+            + '<a href="https://mypowerly.com" target="_blank" rel="noopener noreferrer" style="'
+            +   'padding:10px 24px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;'
+            +   'border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;'
+            +   'display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 12px rgba(16,185,129,0.25);'
+            +   'transition:all 0.2s ease;"'
+            +   'onmouseover="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 6px 16px rgba(16,185,129,0.35)\';"'
+            +   'onmouseout="this.style.transform=\'translateY(0)\';this.style.boxShadow=\'0 4px 12px rgba(16,185,129,0.25)\';">'
+            + '<i class="fas fa-external-link-alt"></i>'
+            + 'Go to Mypowerly & See Your Data</a>'
             + '<button id="mp-auto-sync-close-btn" style="'
             +   'padding:10px 28px;background:#4f46e5;color:#fff;border:none;'
-            +   'border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">'
+            +   'border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;'
+            +   'transition:all 0.2s ease;"'
+            +   'onmouseover="this.style.background=\'#4338ca\';"'
+            +   'onmouseout="this.style.background=\'#4f46e5\';">'
             + 'Continue</button>'
             + '</div>'
             + '</div>'
@@ -1075,7 +1350,8 @@ jQuery(document).ready(function($) {
             }
 
             // Initialize auto-sync checkbox from server setting and wire up save-on-change
-            var autoSyncInitial = !!(window.w91099chConnector && window.w91099chConnector.auto_sync_on_connect);
+            // Default to false (unchecked) if not explicitly set to true
+            var autoSyncInitial = !!(window.w91099chConnector && window.w91099chConnector.auto_sync_on_connect === true);
             $('#mypowerly-auto-sync-on-connect').prop('checked', autoSyncInitial);
 
             $('#mypowerly-auto-sync-on-connect').off('change.autoSync').on('change.autoSync', function() {
@@ -1626,6 +1902,11 @@ jQuery(document).ready(function($) {
     setupConsentGate('#ecommerce-consent', '#sync-ecommerce-btn', '#ecommerce-sync-status');
 
     $('#profile-sync').off('click.profileSync').on('click.profileSync', function() {
+        // Check if connected to Mypowerly
+        if (!checkMypowerlyConnection()) {
+            return;
+        }
+        
         if (!$('#mypowerly-consent-profile-sync').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending profile data to the external service.');
             return;
@@ -1715,6 +1996,11 @@ jQuery(document).ready(function($) {
     });
 
     $('#plugin-sync').off('click.pluginSync').on('click.pluginSync', function() {
+        // Check if connected to Mypowerly
+        if (!checkMypowerlyConnection()) {
+            return;
+        }
+        
         if (!$('#mypowerly-consent-plugin-sync').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending plugin data to the external service.');
             return;
@@ -1961,6 +2247,11 @@ jQuery(document).ready(function($) {
     });
 
     $('#affiliates-sync').off('click.affiliatesSync').on('click.affiliatesSync', function() {
+        // Check if connected to Mypowerly
+        if (!checkMypowerlyConnection()) {
+            return;
+        }
+        
         if (!$('#mypowerly-consent-affiliates-sync').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending affiliate/vendor data to the external service.');
             return;
@@ -2093,6 +2384,11 @@ jQuery(document).ready(function($) {
     });
     // Sync All Data Functionality - consolidated single payload
     $('#sync-all-data').on('click', function() {
+        // Check if connected to Mypowerly
+        if (!checkMypowerlyConnection()) {
+            return;
+        }
+        
         if (!$('#mypowerly-consent-sync-all').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending data to the external service.');
             return;
@@ -2287,6 +2583,11 @@ jQuery(document).ready(function($) {
 
     // Team/User Invite Members (Card 4)
     $('#team-sync').off('click.teamInvite').on('click.teamInvite', function() {
+        // Check if connected to Mypowerly
+        if (!checkMypowerlyConnection()) {
+            return;
+        }
+        
         if (!$('#mypowerly-consent-team-sync').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending team/user data to the external service.');
             return;
@@ -3183,6 +3484,11 @@ jQuery(document).ready(function($) {
 
     // Form Plugin Sync Button Handler
     $('#sync-form-plugins-btn').off('click.formSync').on('click.formSync', function() {
+        // Check if connected to Mypowerly
+        if (!checkMypowerlyConnection()) {
+            return;
+        }
+        
         if (!$('#form-plugins-consent').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending form plugin data to the external service.');
             return;
@@ -3195,6 +3501,11 @@ jQuery(document).ready(function($) {
 
     // Contractor Sync Button Handler
     $('#sync-contractor-btn').off('click.contractorSync').on('click.contractorSync', function() {
+        // Check if connected to Mypowerly
+        if (!checkMypowerlyConnection()) {
+            return;
+        }
+        
         if (!$('#contractor-consent').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending membership/subscription plugin data to the external service.');
             return;
@@ -3207,6 +3518,11 @@ jQuery(document).ready(function($) {
 
     // Freelancer/Contractor Sync Button Handler
     $('#sync-freelancer-contractor-btn').off('click.freelancerSync').on('click.freelancerSync', function() {
+        // Check if connected to Mypowerly
+        if (!checkMypowerlyConnection()) {
+            return;
+        }
+        
         if (!$('#freelancer-contractor-consent').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending freelancer/contractor plugin data to the external service.');
             return;
@@ -3219,6 +3535,11 @@ jQuery(document).ready(function($) {
 
     // Accounting/Bookkeeping Sync Button Handler
     $('#sync-accounting-bookkeeping-btn').off('click.accountingSync').on('click.accountingSync', function() {
+        // Check if connected to Mypowerly
+        if (!checkMypowerlyConnection()) {
+            return;
+        }
+        
         if (!$('#accounting-bookkeeping-consent').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending accounting/bookkeeping plugin data to the external service.');
             return;
@@ -3231,6 +3552,11 @@ jQuery(document).ready(function($) {
 
     // Wallet/Payout Sync Button Handler
     $('#sync-wallet-payout-btn').off('click.walletSync').on('click.walletSync', function() {
+        // Check if connected to Mypowerly
+        if (!checkMypowerlyConnection()) {
+            return;
+        }
+        
         if (!$('#wallet-payout-consent').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending wallet/payout plugin data to the external service.');
             return;

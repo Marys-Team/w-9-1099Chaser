@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Vendor Onboarding W9-1099 Chaser by Mypowerly
  * Description: Automate vendor onboarding - W-9 compliance & 1099 Electronic Filing (in minutes). Secure connection between WordPress and MyPowerly platform for W9 form generation, 1099 electronic filing, vendor onboarding, contractor compliance, and affiliate management.
- * Version: 1.0.11
+ * Version: 1.0.10
  * Author: 1099automation
  * Plugin URI: https://wordpress.org/plugins/w9-1099-chaser
  * Text Domain: w9-1099-chaser
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // phpcs:disable Generic.NamingConventions.UpperCaseConstantName.ConstantNotUpperCase
-define( 'w91099ch_VERSION', '1.0.11' );
+define( 'w91099ch_VERSION', '1.0.10' );
 define( 'w91099ch_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'w91099ch_PLUGIN_PATH', plugin_dir_path( __FILE__ ) );
 define( 'w91099ch_PLUGIN_FILE', __FILE__ );
@@ -313,6 +313,7 @@ class w91099ch_Plugin {
 			update_option( 'w91099ch_enable_social_sharing', 0 );
 			update_option( 'w91099ch_enable_secure_w9', 0 );
 			update_option( 'w91099ch_reward_section_visible', 'false' );
+			update_option( 'w91099ch_auto_sync_on_connect', false );
 			
 			// Set W-9 form to display everywhere by default
 			update_option( 'w91099ch_w9_display_method', 'all' );

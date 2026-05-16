@@ -2022,6 +2022,12 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 									<div id="sync-all-duration" class="text-2xl font-bold text-gray-800">0s</div>
 								</div>
 							</div>
+							<div class="mt-6 flex flex-wrap gap-3 justify-center">
+								<a href="https://mypowerly.com" target="_blank" rel="noopener noreferrer" class="mp-btn-primary inline-flex items-center gap-2" style="background: linear-gradient(135deg, #10b981, #059669); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
+									<i class="fas fa-external-link-alt"></i>
+									Go to Mypowerly & See Your Data
+								</a>
+							</div>
 						</div>
 					</div>
 

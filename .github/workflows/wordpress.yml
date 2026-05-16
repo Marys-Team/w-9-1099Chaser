@@ -23,7 +23,7 @@ jobs:
     steps:
 
       - name: Checkout code
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -72,7 +72,7 @@ jobs:
           echo "ZIP created"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: "v${{ steps.version.outputs.version }}"
@@ -94,31 +94,14 @@ jobs:
             --exclude='*.zip' \
             ./ build/
 
-      - name: Install SVN
-        run: sudo apt-get install -y subversion
-
-      - name: Deploy to WordPress.org via SVN
-        run: |
-          SVN_URL="https://plugins.svn.wordpress.org/w9-1099-chaser"
-          SVN_DIR="/tmp/svn-w9-1099-chaser"
-          MAX_ATTEMPTS=3
-          ATTEMPT=0
-          until svn checkout --depth immediates "$SVN_URL" "$SVN_DIR" --username "${{ secrets.WPORG_USERNAME }}" --password "${{ secrets.WPORG_PASSWORD }}" --non-interactive --no-auth-cache; do
-            ATTEMPT=$((ATTEMPT+1))
-            if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
-              echo "SVN checkout failed after $MAX_ATTEMPTS attempts"
-              exit 1
-            fi
-            echo "Attempt $ATTEMPT failed, retrying in 30s..."
-            sleep 30
-          done
-          svn update --set-depth infinity "$SVN_DIR/trunk" --username "${{ secrets.WPORG_USERNAME }}" --password "${{ secrets.WPORG_PASSWORD }}" --non-interactive --no-auth-cache
-          rsync -av --delete ${{ github.workspace }}/build/ "$SVN_DIR/trunk/"
-          cd "$SVN_DIR"
-          svn add --force trunk
-          svn status | grep '^!' | awk '{print $2}' | xargs -r svn delete
-          svn commit -m "Deploy version ${{ steps.version.outputs.version }}" --username "${{ secrets.WPORG_USERNAME }}" --password "${{ secrets.WPORG_PASSWORD }}" --non-interactive --no-auth-cache
-          echo "✅ Deployed to WordPress.org trunk"
+      - name: Deploy to WordPress.org
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        env:
+          SVN_USERNAME: ${{ secrets.WPORG_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.WPORG_PASSWORD }}
+          SLUG: w9-1099-chaser
+          BUILD_DIR: ./build
+          VERSION: ${{ steps.version.outputs.version }}
 
       - name: Deployment success
         run: |
