@@ -727,7 +727,13 @@ Q14: What Google permissions does the plugin need?
 = 1.0.2 =
  Documentation and packaging fixes.
 
+= 1.0.11 =
+* Updated plugin compatibility and stability improvements.
+
 == Upgrade Notice ==
+
+= 1.0.11 =
+Updated plugin compatibility and stability improvements.
 
 = 1.0.5 =
 Major update with automatic webhook integration, External Connect API, enhanced security, and comprehensive testing tools. Existing connections will be automatically upgraded to use the new webhook system.
