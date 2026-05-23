@@ -3574,6 +3574,26 @@ $ab_detector         = new w91099ch_Accounting_Bookkeeping_Plugin_Detector();
 		</div>
 
 		<?php if ( ! $is_connected ) : ?>
+			<!-- Connection Required Alert -->
+			<div class="mp-card mb-8 border-l-4 border-amber-500">
+				<div class="p-6">
+					<div class="flex items-start gap-4">
+						<div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+							<i class="fas fa-lock text-2xl text-amber-600"></i>
+						</div>
+						<div class="flex-1">
+							<h3 class="text-xl font-bold text-gray-800 mb-2">Connection Required</h3>
+							<p class="text-gray-700 mb-4">Please connect to MyPowerly first to enable these advanced features. All buttons and options will be disabled until you connect.</p>
+							<div class="flex flex-wrap gap-4">
+								<button type="button" class="mp-btn-primary" onclick="(function(){var t=document.getElementById('mypowerly-connect-block')||document.getElementById('connect-mypowerly-cta');if(t){t.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(function(){var b=document.getElementById('connect-mypowerly-cta');if(b){b.classList.add('mp-connect-highlight');setTimeout(function(){b.classList.remove('mp-connect-highlight');},2000);}},600);}})();">
+									<i class="fas fa-plug mr-2"></i>Go to Dashboard and Connect
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			<div class="mp-card p-6 mb-10" id="mypowerly-connect-block" style="border-left: 4px solid var(--mp-primary);">
 				<div class="flex flex-col lg:flex-row items-start lg:items-center gap-6">
 					<div class="flex-1">
@@ -4094,8 +4114,8 @@ jQuery(document).ready(function($) {
 			}
 		});
 	});
-\t// Sync All handled in assets/js/w9-1099-chaser-admin-page-inline.js
-\t// Team/User Invite Members (Card 4)
+	// Sync All handled in assets/js/w9-1099-chaser-admin-page-inline.js
+	// Team/User Invite Members (Card 4)
 	$('#team-sync').off('click.teamInvite').on('click.teamInvite', function() {
 		if (!$('#mypowerly-consent-team-sync').is(':checked')) {
 			window.alert('Please check the consent checkbox to enable sending team/user data to the external service.');
@@ -4735,9 +4755,8 @@ jQuery(document).ready(function($) {
 				$('#w91099ch-qr-modal').hide();
 			}
 		});
-    document.execCommand('copy');
-    $temp.remove();
-}
+
+});
 </script>
 
 <?php endif; ?>

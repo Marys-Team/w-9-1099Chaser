@@ -1627,13 +1627,8 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 										<i class="fas fa-up-right-from-square" aria-hidden="true"></i>
 										Go to MyPowerly
 									</a>
-								<?php else : ?>
-									<button type="button" class="mp-btn-primary mp-hero-action" id="mp-hero-scroll-connect"
-										onclick="(function(){var t=document.getElementById('mypowerly-connect-block')||document.getElementById('connect-mypowerly-cta');if(t){t.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(function(){var b=document.getElementById('connect-mypowerly-cta');if(b){b.classList.add('mp-connect-highlight');setTimeout(function(){b.classList.remove('mp-connect-highlight');},2000);}},600);}})();">
-										<i class="fas fa-plug" aria-hidden="true"></i>
-										Connect to Mypowerly
-									</button>
 								<?php endif; ?>
+								<?php // Connect button removed from Advanced Features page - user can use "Go to Dashboard and Connect" button below ?>
 							</div>
 						</div>
 					</div>
@@ -3809,48 +3804,8 @@ jQuery(document).ready(function($) {
 		return window.confirm('Are you sure you want to send ' + label + ' to Mypowerly?');
 	}
 
-	function setupConsentGate(checkboxSelector, buttonSelector, statusSelector) {
-		const $cb = $(checkboxSelector);
-		const $btn = $(buttonSelector);
-		const $status = statusSelector ? $(statusSelector) : null;
-		if (!$btn.length) return;
-
-		const apply = function() {
-			const ok = $cb.length && $cb.is(':checked');
-			$btn.prop('disabled', !ok);
-			$btn.toggleClass('opacity-60 cursor-not-allowed', !ok);
-			if ($status && $status.length) {
-				$status.text(ok ? 'Ready to sync' : 'Check consent to enable sync');
-			}
-		};
-
-		apply();
-
-		if ($cb.length) {
-			$cb.off('change.mypowerlyConsent').on('change.mypowerlyConsent', function() {
-				// Always enable locally when checked to avoid stale disabled block.
-				apply();
-				if ($(this).is(':checked') && typeof window.persistAdminConsentIfNeeded === 'function') {
-					window.persistAdminConsentIfNeeded(function() {
-						// Re-apply once persistence is returned.
-						apply();
-					});
-				}
-			});
-		}
-	}
-
-	setupConsentGate('#mypowerly-consent-profile-sync', '#profile-sync');
-	setupConsentGate('#mypowerly-consent-plugin-sync', '#plugin-sync');
-	setupConsentGate('#mypowerly-consent-affiliates-sync', '#affiliates-sync');
-	setupConsentGate('#mypowerly-consent-team-sync', '#team-sync');
-	setupConsentGate('#mypowerly-consent-sync-all', '#sync-all-data');
-	setupConsentGate('#form-plugins-consent', '#sync-form-plugins-btn');
-	setupConsentGate('#wallet-payout-consent', '#sync-wallet-payout-btn');
-	setupConsentGate('#freelancer-contractor-consent', '#sync-freelancer-contractor-btn');
-	setupConsentGate('#accounting-bookkeeping-consent', '#sync-accounting-bookkeeping-btn');
-	setupConsentGate('#contractor-consent', '#sync-contractor-btn');
-	setupConsentGate('#ecommerce-consent', '#sync-ecommerce-btn', '#ecommerce-sync-status');
+	// setupConsentGate is defined in assets/js/w9-1099-chaser-admin-page-inline.js
+	// Removing duplicate definition here to avoid conflicts
 
 	// Additional explicit handler for ecommerce consent to ensure it works
 	$('#ecommerce-consent').off('change.ecommerceExplicit').on('change.ecommerceExplicit', function() {
@@ -4187,8 +4142,8 @@ jQuery(document).ready(function($) {
 			}
 		});
 	});
-\t// Sync All handled in assets/js/w9-1099-chaser-admin-page-inline.js
-\t// Team/User Invite Members (Card 4)
+	// Sync All handled in assets/js/w9-1099-chaser-admin-page-inline.js
+	// Team/User Invite Members (Card 4)
 	$('#team-sync').off('click.teamInvite').on('click.teamInvite', function() {
 		if (!$('#mypowerly-consent-team-sync').is(':checked')) {
 			window.alert('Please check the consent checkbox to enable sending team/user data to the external service.');
@@ -4828,9 +4783,8 @@ jQuery(document).ready(function($) {
 				$('#w91099ch-qr-modal').hide();
 			}
 		});
-    document.execCommand('copy');
-    $temp.remove();
-}
+
+});
 </script>
 <?php endif; ?>
 

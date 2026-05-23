@@ -6,11 +6,13 @@ Tested up to: 6.9
 Requires PHP: 7.4
 Stable tag: 1.0.13
 License: GPLv2 or later
-License URI: https://www.gnu.org/licenses/gpl-2.0.html
+License URI: <a href="https://www.gnu.org/licenses/gpl-2.0.html">https://www.gnu.org/licenses/gpl-2.0.html</a>
 
 Automate vendor onboarding - W-9 compliance & 1099 Electronic Filing (in minutes). Generate W-9 PDFs with eSignature. Connect to MyPowerly for advanced W-9/1099 workflows, automations, webhook integration and electronic filing.
 
 == Description ==
+
+**Note: This plugin is currently in beta stage. Features and functionality may evolve as we continue development.**
 
 Stop chasing vendors for W-9s. Automate it inside WordPress.
 
@@ -19,6 +21,8 @@ If your WordPress site pays affiliates, contractors, or vendors — you are lega
 **⚠️ One missing W-9 can trigger an IRS penalty of $310 per form. Intentional disregard carries penalties with no maximum cap.**
 
 W-9 1099 Chaser is the only WordPress-native plugin that automates the full compliance workflow — from the first W-9 request to the final IRS e-file — without a single data export or CSV upload.
+
+*This plugin is currently in beta. We're actively improving features and welcome your feedback as we enhance the platform.*
 
 
 
@@ -174,8 +178,8 @@ No ads. No hidden tracking. Full subprocessor transparency.
 
   ⚠️  This plugin does not file tax forms or provide tax advice. All 1099 filing is handled by the connected MyPowerly service.
 
-Privacy Policy: https://1099automation.com/w9-1099-chaser/privacy-policy/
-Terms: https://1099automation.com/w9-1099-chaser/terms/
+Privacy Policy: <a href="https://1099automation.com/w9-1099-chaser/privacy-policy/">https://1099automation.com/w9-1099-chaser/privacy-policy/</a>
+Terms: <a href="https://1099automation.com/w9-1099-chaser/terms/">https://1099automation.com/w9-1099-chaser/terms/</a>
 
 
 
@@ -198,9 +202,9 @@ Connect with our platform for advanced vendor onboarding features including:
 
 For advanced workflows, an administrator can connect the site to an external API provider:
 
-* Official website: https://1099automation.com/
-* Primary service used by this plugin: https://www.mypowerly.com/
-* Partner platform: https://1099automation.com/become-a-partner
+* Official website: <a href="https://1099automation.com/">https://1099automation.com/</a>
+* Primary service used by this plugin: <a href="https://www.mypowerly.com/">https://www.mypowerly.com/</a>
+* Partner platform: <a href="https://1099automation.com/become-a-partner">https://1099automation.com/become-a-partner</a>
 * Support email: 1099automation@gmail.com
 
 MyPowerly.com provides the backend API, automations and workflow services used by the connected features in this plugin.
@@ -239,13 +243,13 @@ Encryption is used to protect API tokens and administrator-initiated metadata du
 
 For more information:
 
-* Terms & Conditions: https://1099automation.com/w9-1099-chaser/terms/
-* Privacy Policy: https://1099automation.com/w9-1099-chaser/privacy-policy/
+* Terms & Conditions: <a href="https://1099automation.com/w9-1099-chaser/terms/">https://1099automation.com/w9-1099-chaser/terms/</a>
+* Privacy Policy: <a href="https://1099automation.com/w9-1099-chaser/privacy-policy/">https://1099automation.com/w9-1099-chaser/privacy-policy/</a>
 
 = MyPowerly =
 
-* Website: https://mypowerly.com
-* API Domain: https://mypowerly.com
+* Website: <a href="https://mypowerly.com">https://mypowerly.com</a>
+* API Domain: <a href="https://mypowerly.com">https://mypowerly.com</a>
 * Connects your WordPress site to your MyPowerly account
 * Enables user-initiated sync for automations, workflows, W-9 management, affiliate/vendor tracking, and widget generation
 * Data is transmitted only after an administrator performs an explicit action (e.g., Connect, Sync, Generate Widget Code)
@@ -261,7 +265,7 @@ For more information:
   * Completed W-9 PDFs are not stored in WordPress
 * Stored by MyPowerly:
   * Synced data is stored securely in your MyPowerly account
-  * Privacy Policy: https://www.mypowerly.com/privacy-policy
+  * Privacy Policy: <a href="https://www.mypowerly.com/privacy-policy">https://www.mypowerly.com/privacy-policy</a>
 
 = MyPowerly Features =
 
@@ -309,12 +313,12 @@ When data is sent:
 • Only after explicit user action (administrator clicks Connect, runs Sync actions, or generates widget code). No automatic background transmission.
 
 Where data is sent:
-• MyPowerly service (primary): https://mypowerly.com
+• MyPowerly service (primary): <a href="https://mypowerly.com">https://mypowerly.com</a>
 • Optional widget embeds: depends on embed code you generate
 
 Note: Widget embed code may load third-party scripts/iframes from:
-• https://mypowerly.com
-• https://1099automation.com
+• <a href="https://mypowerly.com">https://mypowerly.com</a>
+• <a href="https://1099automation.com">https://1099automation.com</a>
 
 Why data is sent:
 • To connect your WordPress site to your MyPowerly account and perform user-initiated sync and widget features.
@@ -344,14 +348,14 @@ This plugin connects to the following external services to provide specific feat
 * What it is used for: API integration for payees / affiliates / vendors / independent contractors data syncing, plugin management features, and support-related functionality in the WordPress admin.
 * What data is sent: depending on the feature you use, the plugin may send connection / credential data during setup, payees / affiliates / vendors / independent contractors data, plugin and site information, and W-9 form data entered in the WordPress admin.
 * When data is sent: during connection setup and only when an administrator performs an explicit action such as connecting the site, running synchronization processes, or using admin features that communicate with MyPowerly.
-* Terms of Service: https://1099automation.com/w9-1099-chaser/terms/
-* Privacy Policy: https://1099automation.com/w9-1099-chaser/privacy-policy/
+* Terms of Service: <a href="https://1099automation.com/w9-1099-chaser/terms/">https://1099automation.com/w9-1099-chaser/terms/</a>
+* Privacy Policy: <a href="https://1099automation.com/w9-1099-chaser/privacy-policy/">https://1099automation.com/w9-1099-chaser/privacy-policy/</a>
 
 == Third-Party Services ==
 
 This plugin makes external requests to the following services:
 
-* MyPowerly (required for connection and sync): https://mypowerly.com
+* MyPowerly (required for connection and sync): <a href="https://mypowerly.com">https://mypowerly.com</a>
 * Widget embeds (optional): depends on the widget embed code you choose to generate and embed.
 
 == Data Handling Transparency ==
@@ -380,7 +384,7 @@ The plugin bundles the Signature Pad library for capturing eSignatures.
  * Library name: Signature Pad
  * Version used: 5.1.3
  * License: MIT
- * Upstream source code repository: https://github.com/szimek/signature_pad
+ * Upstream source code repository: <a href="https://github.com/szimek/signature_pad">https://github.com/szimek/signature_pad</a>
  * Files included in this plugin:
   * assets/js/vendor/signature_pad.umd.js
  
@@ -391,7 +395,7 @@ The plugin bundles the Signature Pad library for capturing eSignatures.
 To rebuild the bundled minified file from upstream source:
 
 1. Clone the upstream repository:
-   git clone https://github.com/szimek/signature_pad.git
+   git clone <a href="https://github.com/szimek/signature_pad.git">https://github.com/szimek/signature_pad.git</a>
 
 2. Check out the version used by this plugin:
    git checkout v5.1.3
@@ -409,7 +413,7 @@ The plugin bundles the PDF-Lib library for client-side PDF generation.
 
  * Library name: PDF-Lib
  * Version used: 1.17.1
- * Upstream source code repository: https://github.com/Hopding/pdf-lib
+ * Upstream source code repository: <a href="https://github.com/Hopding/pdf-lib">https://github.com/Hopding/pdf-lib</a>
  * Files included in this plugin:
   * assets/js/vendor/pdf-lib.js
 
@@ -422,7 +426,7 @@ The plugin currently enqueues the following file:
 To obtain the exact upstream distribution for this version:
 
 1. Visit the upstream releases page and download the 1.17.1 build:
-   https://github.com/Hopding/pdf-lib/releases
+   <a href="https://github.com/Hopding/pdf-lib/releases">https://github.com/Hopding/pdf-lib/releases</a>
 
 = Tailwind CSS (CSS framework) =
 
@@ -431,7 +435,7 @@ The plugin bundles Tailwind CSS for styling plugin admin and front-end UI.
  * Library name: Tailwind CSS
  * Version used: 2.2.19
  * License: MIT
- * Upstream website: https://tailwindcss.com
+ * Upstream website: <a href="https://tailwindcss.com">https://tailwindcss.com</a>
  * Files included in this plugin:
   * assets/css/vendor/tailwind-2.2.19.min.css
 
@@ -440,7 +444,7 @@ Note: The bundled Tailwind build includes Modern Normalize (v1.1.0) which is MIT
 To obtain the upstream distribution for this version:
 
 1. Install Tailwind CSS 2.2.19 from npm:
-   https://www.npmjs.com/package/tailwindcss/v/2.2.19
+   <a href="https://www.npmjs.com/package/tailwindcss/v/2.2.19">https://www.npmjs.com/package/tailwindcss/v/2.2.19</a>
 
 = Font Awesome Free (icon library) =
 
@@ -448,8 +452,8 @@ The plugin bundles Font Awesome Free for icon display.
 
  * Library name: Font Awesome Free
  * Version used: 6.4.0
- * License: https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT)
- * Upstream website: https://fontawesome.com
+ * License: <a href="https://fontawesome.com/license/free">https://fontawesome.com/license/free</a> (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT)
+ * Upstream website: <a href="https://fontawesome.com">https://fontawesome.com</a>
  * Files included in this plugin:
   * assets/vendor/fontawesome/css/all.min.css
   * assets/vendor/fontawesome/webfonts/fa-brands-400.woff2
@@ -462,7 +466,7 @@ The plugin bundles the Inter font locally (to avoid loading fonts from third-par
 
  * Font name: Inter
  * License: SIL Open Font License 1.1
- * Upstream source: https://github.com/rsms/inter
+ * Upstream source: <a href="https://github.com/rsms/inter">https://github.com/rsms/inter</a>
  * Files included in this plugin:
   * assets/css/vendor/inter.css
   * assets/fonts/inter/Inter-Variable.woff2
@@ -481,7 +485,7 @@ The plugin uses this local template directly without requiring external download
 This plugin is licensed under the GPLv2 (or later).
 
  * License: GPLv2 or later
- * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * License URI: <a href="https://www.gnu.org/licenses/gpl-2.0.html">https://www.gnu.org/licenses/gpl-2.0.html</a>
 
 Third-party libraries, fonts, and assets bundled with this plugin may have their own licenses. Where applicable, license texts are included in the plugin package and/or referenced in this readme.
 
@@ -517,7 +521,7 @@ The plugin now supports Google Drive/Google Sheets integration for enhanced data
 = Step-by-Step Google Drive Connection =
 
 **Step 1: Prepare Your Google Sheet**
-1. Go to https://drive.google.com and sign in to your Google account
+1. Go to <a href="https://drive.google.com">https://drive.google.com</a> and sign in to your Google account
 2. Click "New" → "Google Sheets" → "Blank spreadsheet"
 3. Name your sheet (e.g., "W9-1099 Data", "Affiliate Records", "Contractor Info")
 4. Set up column headers as needed (Name, Email, Status, etc.)
@@ -578,10 +582,10 @@ The plugin now supports Google Drive/Google Sheets integration for enhanced data
 
 The plugin includes comprehensive webhook testing tools:
 
-1. **Easy Testing**: Visit `your-site.com/wp-content/plugins/w9-1099-chaser/webhook-tester.php`
-2. **Advanced Verification**: Use `webhook-verification.php` for detailed diagnostics
+1. **Easy Testing**: Visit your-site.com/wp-content/plugins/w9-1099-chaser/webhook-tester.php
+2. **Advanced Verification**: Use webhook-verification.php for detailed diagnostics
 3. **Configuration Check**: Settings → Webhook Settings shows current webhook status
-4. **Test with webhook.site**: Use https://webhook.site for real-time webhook monitoring
+4. Test with webhook.site: Use <a href="https://webhook.site">https://webhook.site</a> for real-time webhook monitoring
 
 == Frequently Asked Questions ==
 
