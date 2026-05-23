@@ -1901,17 +1901,9 @@ jQuery(document).ready(function($) {
     setupConsentGate('#wallet-payout-consent', '#sync-wallet-payout-btn', '#wallet-payout-sync-status');
     setupConsentGate('#ecommerce-consent', '#sync-ecommerce-btn', '#ecommerce-sync-status');
 
-    $('#profile-sync').off('click.profileSync').on('click.profileSync', function() {
-        // Check if connected to Mypowerly
-        if (!checkMypowerlyConnection()) {
-            return;
-        }
-        
+    $(document).off('click.profileSync').on('click.profileSync', '#profile-sync', function() {
         if (!$('#mypowerly-consent-profile-sync').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending profile data to the external service.');
-            return;
-        }
-        if (!confirmSendToMypowerly('profile data')) {
             return;
         }
 
@@ -1942,14 +1934,14 @@ jQuery(document).ready(function($) {
         if (!ajaxUrl) {
             $button.prop('disabled', false);
             $progressSection.hide();
-            alert('? AJAX URL is missing. Please reload the admin page.');
+            alert('❌ AJAX URL is missing. Please reload the admin page.');
             return;
         }
 
         if (!ajaxNonce) {
             $button.prop('disabled', false);
             $progressSection.hide();
-            alert('? Security nonce is missing. Please reload the admin page.');
+            alert('❌ Security nonce is missing. Please reload the admin page.');
             return;
         }
 
@@ -1983,14 +1975,14 @@ jQuery(document).ready(function($) {
                     const msg = safeExtractErrorMessage(response, 'Profile sync failed');
                     $button.prop('disabled', false);
                     $progressSection.hide();
-                    alert('? ' + msg);
+                    alert('❌ ' + msg);
                 }
             },
             error: function(xhr, status, error) {
                 $button.prop('disabled', false);
                 $progressSection.hide();
                 const msg = safeExtractErrorMessage(xhr.responseText || error, 'Profile sync connection error');
-                alert('? ' + msg);
+                alert('❌ ' + msg);
             }
         });
     });
@@ -2383,12 +2375,7 @@ jQuery(document).ready(function($) {
         });
     });
     // Sync All Data Functionality - consolidated single payload
-    $('#sync-all-data').on('click', function() {
-        // Check if connected to Mypowerly
-        if (!checkMypowerlyConnection()) {
-            return;
-        }
-        
+    $(document).off('click.syncAllData').on('click.syncAllData', '#sync-all-data', function() {
         if (!$('#mypowerly-consent-sync-all').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending data to the external service.');
             return;
@@ -2523,12 +2510,6 @@ jQuery(document).ready(function($) {
         }
 
         updateProgress(5, 'Initializing sync...');
-
-        if (!confirmSendToMypowerly('all cards data')) {
-            $progressSection.hide();
-            $button.prop('disabled', false);
-            return;
-        }
 
         updateProgress(10, 'Preparing consolidated payload...');
         ['plugin','affiliate','team','forms','membership','contractor','freelancer','accounting','payout'].forEach(function(stepKey) {

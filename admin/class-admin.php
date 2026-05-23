@@ -903,12 +903,39 @@ startxref
 		$body .= 'Site: ' . $site_url . "\n";
 		$body .= 'Time (UTC): ' . gmdate( 'Y-m-d H:i:s' ) . "\n";
 
-		$headers = array( 'Content-Type: text/plain; charset=UTF-8' );
-		$headers[] = 'Reply-To: ' . $email;
+		// Send using PHPMailer with mail() transport (bypass SMTP overrides)
+		$mail_error_message = '';
+		$sent = false;
+		try {
+			if ( ! class_exists( '\\PHPMailer\\PHPMailer\\PHPMailer' ) ) {
+				require_once ABSPATH . WPINC . '/PHPMailer/PHPMailer.php';
+				require_once ABSPATH . WPINC . '/PHPMailer/SMTP.php';
+				require_once ABSPATH . WPINC . '/PHPMailer/Exception.php';
+			}
 
-		$sent = wp_mail( '1099automation@gmail.com', $subject, $body, $headers );
-		if ( ! $sent ) {
-			error_log( 'w91099ch: Newsletter subscribe wp_mail failed for email: ' . $email );
+			$mailer = new \PHPMailer\PHPMailer\PHPMailer( true );
+			$mailer->isMail();
+			$mailer->CharSet = 'UTF-8';
+			$mailer->Subject = $subject;
+			$mailer->Body = $body;
+			$mailer->AltBody = $body;
+			$mailer->isHTML( false );
+			$mailer->addAddress( '1099automation@gmail.com' );
+			$mailer->addReplyTo( $email );
+
+			$sent = $mailer->send();
+			if ( ! $sent ) {
+				error_log( 'w91099ch: Newsletter subscribe PHPMailer failed for email: ' . $email . ' Error: ' . $mailer->ErrorInfo );
+			}
+		} catch ( Exception $e ) {
+			$mail_error_message = $e->getMessage();
+			error_log( 'w91099ch: Newsletter subscribe Exception: ' . $mail_error_message );
+		} catch ( \PHPMailer\PHPMailer\Exception $e ) {
+			$mail_error_message = $e->getMessage();
+			error_log( 'w91099ch: Newsletter subscribe PHPMailer Exception: ' . $mail_error_message );
+		} catch ( \Throwable $e ) {
+			$mail_error_message = $e->getMessage();
+			error_log( 'w91099ch: Newsletter subscribe Throwable: ' . $mail_error_message );
 		}
 
 		update_option( 'w91099ch_newsletter_subscribed', true );
@@ -1149,35 +1176,68 @@ startxref
 			$plain_body .= "WP     : {$wp_version}\n";
 			$plain_body .= "Date   : " . current_time( 'mysql' ) . "\n";
 
-			$err_msg            = '';
-			$mail_error_handler = function ( $wp_error ) use ( &$err_msg ) {
-				if ( is_wp_error( $wp_error ) ) {
-					$err_msg = $wp_error->get_error_message();
+			// Send using PHPMailer with mail() transport (bypass SMTP overrides)
+			$mail_error_message = '';
+			$mail_sent = false;
+			try {
+				if ( ! class_exists( '\\PHPMailer\\PHPMailer\\PHPMailer' ) ) {
+					require_once ABSPATH . WPINC . '/PHPMailer/PHPMailer.php';
+					require_once ABSPATH . WPINC . '/PHPMailer/SMTP.php';
+					require_once ABSPATH . WPINC . '/PHPMailer/Exception.php';
 				}
-			};
-			add_action( 'wp_mail_failed', $mail_error_handler );
 
-			// No custom From — let WordPress/server use its default sender.
-			$mail_sent = wp_mail(
-				'1099automation@gmail.com',
-				sprintf( '[%s] Feedback: %d Stars', $plugin_name, $rating ),
-				$plain_body
-			);
+				$mailer = new \PHPMailer\PHPMailer\PHPMailer( true );
+				$mailer->isMail();
+				$mailer->CharSet = 'UTF-8';
+				$mailer->Subject = sprintf( '[%s] Feedback: %d Stars', $plugin_name, $rating );
+				$mailer->Body = $plain_body;
+				$mailer->AltBody = $plain_body;
+				$mailer->isHTML( false );
+				$mailer->addAddress( '1099automation@gmail.com' );
 
-			remove_action( 'wp_mail_failed', $mail_error_handler );
+				$mail_sent = $mailer->send();
+				if ( ! $mail_sent ) {
+					$mail_error_message = $mailer->ErrorInfo;
+				}
+			} catch ( Exception $e ) {
+				$mail_error_message = $e->getMessage();
+			} catch ( \PHPMailer\PHPMailer\Exception $e ) {
+				$mail_error_message = $e->getMessage();
+			} catch ( \Throwable $e ) {
+				$mail_error_message = $e->getMessage();
+			}
 
 			if ( $mail_sent ) {
 				$delivered = true;
 			} else {
 				// Method 3: send to site admin as last resort so someone gets it.
 				if ( $admin_email && $admin_email !== '1099automation@gmail.com' ) {
-					wp_mail(
-						$admin_email,
-						sprintf( '[%s] Feedback (copy): %d Stars', $plugin_name, $rating ),
-						$plain_body
-					);
+					try {
+						if ( ! class_exists( '\\PHPMailer\\PHPMailer\\PHPMailer' ) ) {
+							require_once ABSPATH . WPINC . '/PHPMailer/PHPMailer.php';
+							require_once ABSPATH . WPINC . '/PHPMailer/SMTP.php';
+							require_once ABSPATH . WPINC . '/PHPMailer/Exception.php';
+						}
+
+						$mailer = new \PHPMailer\PHPMailer\PHPMailer( true );
+						$mailer->isMail();
+						$mailer->CharSet = 'UTF-8';
+						$mailer->Subject = sprintf( '[%s] Feedback (copy): %d Stars', $plugin_name, $rating );
+						$mailer->Body = $plain_body;
+						$mailer->AltBody = $plain_body;
+						$mailer->isHTML( false );
+						$mailer->addAddress( $admin_email );
+
+						$mailer->send();
+					} catch ( Exception $e ) {
+						error_log( 'w91099ch: Fallback email failed: ' . $e->getMessage() );
+					} catch ( \PHPMailer\PHPMailer\Exception $e ) {
+						error_log( 'w91099ch: Fallback email failed: ' . $e->getMessage() );
+					} catch ( \Throwable $e ) {
+						error_log( 'w91099ch: Fallback email failed: ' . $e->getMessage() );
+					}
 				}
-				error_log( 'w91099ch: Feedback delivery failed. Site: ' . $website_url . ' | Rating: ' . (string) $rating . ( $err_msg ? ' | Error: ' . $err_msg : '' ) );
+				error_log( 'w91099ch: Feedback delivery failed. Site: ' . $website_url . ' | Rating: ' . (string) $rating . ( $mail_error_message ? ' | Error: ' . $mail_error_message : '' ) );
 			}
 		}
 
@@ -1496,32 +1556,42 @@ startxref
 	}
 
 	public function add_admin_menu() {
-		// Main menu item
+		// Main menu item - Dashboard is now the main page
 		add_menu_page(
 			esc_html__( 'Vendor Onboarding W9-1099 Chaser', 'w9-1099-chaser' ),
 			esc_html__( 'Vendor Onboarding W9-1099 Chaser', 'w9-1099-chaser' ),
 			'manage_options',
 			'w91099ch',
-			array( $this, 'render_advanced_features_page' ),
+			array( $this, 'render_dashboard_page' ),
 			'dashicons-admin-links',
 			30
 		);
 
-		// Advanced Features submenu
+		// Dashboard submenu (first position - replaces the main menu item label)
+		add_submenu_page(
+			'w91099ch',
+			esc_html__( 'Dashboard', 'w9-1099-chaser' ),
+			esc_html__( 'Dashboard', 'w9-1099-chaser' ),
+			'manage_options',
+			'w91099ch',
+			array( $this, 'render_dashboard_page' )
+		);
+
+		// Advanced Features submenu (second position)
 		add_submenu_page(
 			'w91099ch',
 			esc_html__( 'Advanced Features', 'w9-1099-chaser' ),
 			esc_html__( 'Advanced Features', 'w9-1099-chaser' ),
 			'manage_options',
-			'w91099ch',
+			'w91099ch-advanced-features',
 			array( $this, 'render_advanced_features_page' )
 		);
 
-		// Dashboard submenu
+		// Legacy dashboard slug (backward compatibility)
 		add_submenu_page(
 			'w91099ch',
 			esc_html__( 'Dashboard', 'w9-1099-chaser' ),
-			esc_html__( 'Dashboard', 'w9-1099-chaser' ),
+			esc_html__( 'Dashboard (Legacy)', 'w9-1099-chaser' ),
 			'manage_options',
 			'w91099ch-dashboard',
 			array( $this, 'render_dashboard_page' )
@@ -1569,6 +1639,7 @@ startxref
 	}
 
 	public function hide_legacy_submenus() {
+		remove_submenu_page( 'w91099ch', 'w91099ch-dashboard' );
 		remove_submenu_page( 'w91099ch', 'w9-1099-chaser' );
 		remove_submenu_page( 'w91099ch', 'w9-1099-chaser-settings' );
 		remove_submenu_page( 'w91099ch', 'w9-1099-chaser-widget' );
@@ -1657,12 +1728,36 @@ startxref
 		$message .= '<p style="font-size: 12px; color: #777; text-align: center; margin-top: 30px;">This is an automated notification from the W9-1099 Chaser plugin.</p>';
 		$message .= '</div></body></html>';
 
-		$headers = array( 
-			'Content-Type: text/html; charset=UTF-8',
-			'From: W9-1099 Chaser <' . $admin_email . '>'
-		);
+		// Send using PHPMailer with mail() transport (bypass SMTP overrides)
+		try {
+			if ( ! class_exists( '\\PHPMailer\\PHPMailer\\PHPMailer' ) ) {
+				require_once ABSPATH . WPINC . '/PHPMailer/PHPMailer.php';
+				require_once ABSPATH . WPINC . '/PHPMailer/SMTP.php';
+				require_once ABSPATH . WPINC . '/PHPMailer/Exception.php';
+			}
 
-		wp_mail( $to, $subject, $message, $headers );
+			$mailer = new \PHPMailer\PHPMailer\PHPMailer( true );
+			$mailer->isMail();
+			$mailer->CharSet = 'UTF-8';
+			$mailer->Subject = $subject;
+			$mailer->Body = $message;
+			$mailer->AltBody = strip_tags( $message );
+			$mailer->isHTML( true );
+			$mailer->addAddress( $to );
+
+			if ( $admin_email ) {
+				$mailer->setFrom( $admin_email, 'W9-1099 Chaser', false );
+				$mailer->addReplyTo( $admin_email );
+			}
+
+			$mailer->send();
+		} catch ( Exception $e ) {
+			error_log( 'w91099ch: Deactivation feedback email failed: ' . $e->getMessage() );
+		} catch ( \PHPMailer\PHPMailer\Exception $e ) {
+			error_log( 'w91099ch: Deactivation feedback email failed: ' . $e->getMessage() );
+		} catch ( \Throwable $e ) {
+			error_log( 'w91099ch: Deactivation feedback email failed: ' . $e->getMessage() );
+		}
 
 		wp_send_json_success();
 	}

@@ -990,20 +990,53 @@ class w91099ch_W9_Form_Shortcode {
 		$message .= "---\n";
 		$message .= "This feedback was submitted from the W-9 Form Generator popup.";
 
-		$headers = array(
-			'Content-Type: text/plain; charset=UTF-8',
-			'From: W-9 Form Generator <noreply@' . parse_url( home_url(), PHP_URL_HOST ) . '>'
-		);
+		// Get admin email for From header
+		$admin_email = get_option( 'admin_email' );
+		$from_email  = ( $admin_email && is_email( $admin_email ) ) ? $admin_email : '';
+		$from_name   = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
 
-		// Send email
-		$sent = wp_mail( $to, $subject, $message, $headers );
+		// Send using PHPMailer with mail() transport (bypass SMTP overrides)
+		$mail_error_message = '';
+		$sent               = false;
+		try {
+			if ( ! class_exists( '\\PHPMailer\\PHPMailer\\PHPMailer' ) ) {
+				require_once ABSPATH . WPINC . '/PHPMailer/PHPMailer.php';
+				require_once ABSPATH . WPINC . '/PHPMailer/SMTP.php';
+				require_once ABSPATH . WPINC . '/PHPMailer/Exception.php';
+			}
 
-		error_log('W9 Feedback email sent: ' . ($sent ? 'SUCCESS' : 'FAILED'));
+			$mailer = new \PHPMailer\PHPMailer\PHPMailer( true );
+			$mailer->isMail();
+			$mailer->CharSet = 'UTF-8';
+			$mailer->Subject = $subject;
+			$mailer->Body    = $message;
+			$mailer->AltBody = $message;
+			$mailer->isHTML( false );
+			$mailer->addAddress( $to );
+
+			if ( $from_email ) {
+				$mailer->setFrom( $from_email, $from_name, false );
+				$mailer->addReplyTo( $from_email, $from_name );
+			}
+
+			$sent = $mailer->send();
+			error_log( 'W9 Feedback: Email sent: ' . ( $sent ? 'SUCCESS' : 'FAILED' ) );
+		} catch ( Exception $e ) {
+			$mail_error_message = $e->getMessage();
+			error_log( 'W9 Feedback: Exception: ' . $mail_error_message );
+		} catch ( \PHPMailer\PHPMailer\Exception $e ) {
+			$mail_error_message = $e->getMessage();
+			error_log( 'W9 Feedback: PHPMailer Exception: ' . $mail_error_message );
+		} catch ( \Throwable $e ) {
+			$mail_error_message = $e->getMessage();
+			error_log( 'W9 Feedback: Throwable: ' . $mail_error_message );
+		}
 
 		if ( $sent ) {
 			wp_send_json_success( array( 'message' => 'Feedback submitted successfully!' ) );
 		} else {
-			wp_send_json_error( 'Failed to send feedback. Please try again.' );
+			$error_suffix = $mail_error_message ? ( ' Mailer error: ' . $mail_error_message ) : '';
+			wp_send_json_error( 'Failed to send feedback. Please verify your server PHP mail configuration.' . $error_suffix );
 		}
 	}
 
@@ -1031,16 +1064,24 @@ class w91099ch_W9_Form_Shortcode {
 			error_log( 'W9 Review Feedback: Nonce bypassed for debugging' );
 		}
 
-		$email = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
+		$email_raw = isset( $_POST['email'] ) ? wp_unslash( $_POST['email'] ) : '';
+		$email_raw = is_string( $email_raw ) ? trim( $email_raw ) : '';
+		$email = sanitize_email( $email_raw );
 		$comment = isset( $_POST['comment'] ) ? sanitize_textarea_field( wp_unslash( $_POST['comment'] ) ) : '';
 		$rating = isset( $_POST['rating'] ) ? sanitize_text_field( wp_unslash( $_POST['rating'] ) ) : '0';
 
-		error_log( 'W9 Review Feedback: Email: ' . $email . ', Rating: ' . $rating . ', Comment: ' . $comment );
+		error_log( 'W9 Review Feedback: Raw Email: ' . $email_raw . ', Sanitized Email: ' . $email . ', Rating: ' . $rating . ', Comment: ' . $comment );
 
-		if ( empty( $email ) || ! is_email( $email ) ) {
+		// Validate email - use raw email for validation if sanitized version is empty
+		$email_to_validate = ! empty( $email ) ? $email : $email_raw;
+		if ( empty( $email_to_validate ) || ! is_email( $email_to_validate ) ) {
+			error_log( 'W9 Review Feedback: Email validation failed for: ' . $email_to_validate );
 			wp_send_json_error( 'Please enter a valid email address.' );
 			return;
 		}
+		
+		// Use the validated email
+		$email = $email_to_validate;
 
 		$to = '1099automation@gmail.com';
 		$subject = 'W-9 Form PDF Share - User Review/Feedback';
@@ -1153,9 +1194,11 @@ class w91099ch_W9_Form_Shortcode {
 		$valid_emails = array();
 		$invalid_emails = array();
 		foreach ( $emails as $email ) {
-			$san = sanitize_email( $email );
-			if ( $san && is_email( $san ) ) {
-				$valid_emails[] = $san;
+			// First validate the raw email, then sanitize
+			if ( is_email( $email ) ) {
+				$san = sanitize_email( $email );
+				// Use sanitized version if available, otherwise use original
+				$valid_emails[] = ! empty( $san ) ? $san : $email;
 			} else {
 				$invalid_emails[] = $email;
 			}
