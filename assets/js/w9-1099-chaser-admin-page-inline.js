@@ -87,7 +87,7 @@ jQuery(document).ready(function($) {
     }
 
     function updateCardsDisabledState(isConnected) {
-        const $cardsGrid = $('.mp-cards-grid');
+        const $cardsGrid = $('.mp-cards-grid').not('.w91099ch-sync-modules-grid');
         if (!$cardsGrid.length) {
             return;
         }
@@ -1987,17 +1987,9 @@ jQuery(document).ready(function($) {
         });
     });
 
-    $('#plugin-sync').off('click.pluginSync').on('click.pluginSync', function() {
-        // Check if connected to Mypowerly
-        if (!checkMypowerlyConnection()) {
-            return;
-        }
-        
+    $(document).off('click.pluginSync').on('click.pluginSync', '#plugin-sync', function() {
         if (!$('#mypowerly-consent-plugin-sync').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending plugin data to the external service.');
-            return;
-        }
-        if (!confirmSendToMypowerly('plugin data')) {
             return;
         }
         const $button = $('#plugin-sync');
@@ -2238,17 +2230,9 @@ jQuery(document).ready(function($) {
         });
     });
 
-    $('#affiliates-sync').off('click.affiliatesSync').on('click.affiliatesSync', function() {
-        // Check if connected to Mypowerly
-        if (!checkMypowerlyConnection()) {
-            return;
-        }
-        
+    $(document).off('click.affiliatesSync').on('click.affiliatesSync', '#affiliates-sync', function() {
         if (!$('#mypowerly-consent-affiliates-sync').is(':checked')) {
             window.alert('Please check the consent checkbox to enable sending affiliate/vendor data to the external service.');
-            return;
-        }
-        if (!confirmSendToMypowerly('affiliate/vendor data')) {
             return;
         }
         const $button = $('#affiliates-sync');
@@ -2512,7 +2496,7 @@ jQuery(document).ready(function($) {
         updateProgress(5, 'Initializing sync...');
 
         updateProgress(10, 'Preparing consolidated payload...');
-        ['plugin','affiliate','team','forms','membership','contractor','freelancer','accounting','payout'].forEach(function(stepKey) {
+        ['plugin','affiliate','team','forms','membership','contractor','freelancer','accounting','payout','website-content','analytics','system-config','security-access','payments'].forEach(function(stepKey) {
             updateStepStatus(stepKey, 'processing');
         });
 
@@ -2525,7 +2509,7 @@ jQuery(document).ready(function($) {
             },
             success: function(webhookResponse) {
                 if (webhookResponse && webhookResponse.success) {
-                    ['plugin','affiliate','team','forms','membership','contractor','freelancer','accounting','payout'].forEach(function(stepKey) {
+                    ['plugin','affiliate','team','forms','membership','contractor','freelancer','accounting','payout','website-content','analytics','system-config','security-access','payments'].forEach(function(stepKey) {
                         updateStepStatus(stepKey, 'success');
                     });
                     const syncAllWebhookInfo = buildWebhookStatusText(webhookResponse.data && webhookResponse.data.webhook_status);
@@ -2562,28 +2546,7 @@ jQuery(document).ready(function($) {
         });
     }
 
-    // Team/User Invite Members (Card 4)
-    $('#team-sync').off('click.teamInvite').on('click.teamInvite', function() {
-        // Check if connected to Mypowerly
-        if (!checkMypowerlyConnection()) {
-            return;
-        }
-        
-        if (!$('#mypowerly-consent-team-sync').is(':checked')) {
-            window.alert('Please check the consent checkbox to enable sending team/user data to the external service.');
-            return;
-        }
-        if (!confirmSendToMypowerly('team/user data')) {
-            return;
-        }
-
-        // Require consent
-        if (!window.confirm('Confirm: invite the currently displayed users to the workspace team?')) {
-            return;
-        }
-
-        syncTeamData();
-    });
+    // Team/User Invite Members (Card 4) - handler in advanced-features-page.php inline script
 
     function syncTeamData() {
         window.w91099chConnectorConsole.log('Starting Team Invite...');
@@ -2686,15 +2649,23 @@ jQuery(document).ready(function($) {
 
         function bindSync($btn, $status, action, confirmLabel, busyLabel, doneLabelFn) {
             if (!$btn.length) return;
+
+            // Store original button label for restore
+            $btn.data('original-label', $btn.html());
+
             $btn.off('click.cardSync').on('click.cardSync', function() {
                 if ($btn.prop('disabled')) return;
-                if (typeof confirmSendToMypowerly === 'function' && !confirmSendToMypowerly(confirmLabel)) {
-                    return;
-                }
+
+                const btnId    = $btn.attr('id') || '';
+                const resultId = btnId.replace('-btn', '-result');
+                const $result  = $('#' + resultId);
 
                 $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Syncing...');
                 if ($status && $status.length) {
                     $status.text(busyLabel);
+                }
+                if ($result.length) {
+                    $result.hide();
                 }
 
                 $.ajax({
@@ -2709,15 +2680,18 @@ jQuery(document).ready(function($) {
                             const webhookInfo = buildWebhookStatusText(response.data && response.data.webhook_status);
                             const doneLabel = doneLabelFn(response) + (webhookInfo ? ' | ' + webhookInfo : '');
                             if ($status && $status.length) {
-                                $status.text(doneLabel);
+                                $status.text('Ready');
                             }
-                            alert('✅ Sync completed! ' + (webhookInfo || 'No webhook configured.'));
+                            if ($result.length) {
+                                $result.find('.card-sync-result-msg').text(doneLabel);
+                                $result.show();
+                            }
                         } else {
                             const msg = safeMsg(response, 'Sync failed');
                             if ($status && $status.length) {
                                 $status.text('Sync failed: ' + msg);
                             }
-                            alert('Sync failed: ' + msg);
+                            alert('❌ Sync failed: ' + msg);
                         }
                     },
                     error: function(xhr) {
@@ -2725,10 +2699,10 @@ jQuery(document).ready(function($) {
                         if ($status && $status.length) {
                             $status.text('Sync error: ' + msg);
                         }
-                        alert('Sync error: ' + msg);
+                        alert('❌ Sync error: ' + msg);
                     },
                     complete: function() {
-                        $btn.prop('disabled', false).html($btn.data('label') || $btn.text().replace('Syncing...', 'Sync'));
+                        $btn.prop('disabled', false).html($btn.data('original-label') || $btn.html());
                     }
                 });
             });
@@ -3550,6 +3524,170 @@ jQuery(document).ready(function($) {
 
     // Ecommerce Sync Button Handler - handled by bindCardSyncButtons() above
 
+    function initMockDataSyncModules() {
+        const $cards = $('.w91099ch-mock-sync-card');
+        if (!$cards.length) {
+            return;
+        }
+
+        function getPayload($card) {
+            const moduleId = String($card.data('module-id') || '');
+            const title = $.trim($card.find('h3').first().text());
+            const payload = {
+                module: moduleId,
+                title: title,
+                selected: {}
+            };
+            let selectedCount = 0;
+
+            $card.find('.w91099ch-mock-sync-item:checked').each(function() {
+                const group = String($(this).data('group') || '');
+                const item = String($(this).data('item') || '');
+
+                if (!group || !item) {
+                    return;
+                }
+
+                if (!payload.selected[group]) {
+                    payload.selected[group] = [];
+                }
+
+                payload.selected[group].push(item);
+                selectedCount++;
+            });
+
+            return {
+                payload: payload,
+                count: selectedCount
+            };
+        }
+
+        function updateCardState($card) {
+            const hasConsent = $card.find('.w91099ch-mock-sync-consent').is(':checked');
+            const $button = $card.find('.w91099ch-mock-sync-button');
+            const $status = $card.find('.w91099ch-mock-sync-status');
+            const payloadInfo = getPayload($card);
+
+            $card.find('.w91099ch-mock-sync-option').each(function() {
+                $(this).toggleClass('is-excluded', !$(this).find('.w91099ch-mock-sync-item').is(':checked'));
+            });
+
+            $card.find('.w91099ch-mock-payload-preview').text(JSON.stringify(payloadInfo.payload, null, 2));
+            $card.find('.w91099ch-mock-payload-count').text(payloadInfo.count + ' selected');
+
+            $button.prop('disabled', !hasConsent);
+            $button.toggleClass('opacity-60 cursor-not-allowed', !hasConsent);
+
+            if (!hasConsent) {
+                $status.removeClass('is-success is-error is-loading').text('Check consent to enable sync');
+            } else if (payloadInfo.count === 0) {
+                $status.removeClass('is-success is-loading').addClass('is-error').text('Select at least one item to include in the mock payload');
+            } else {
+                $status.removeClass('is-success is-error is-loading').text('Ready for mock sync');
+            }
+        }
+
+        function removeMockModal() {
+            $('#w91099ch-mock-sync-modal').remove();
+        }
+
+        function showMockConfirmation($card, payloadInfo) {
+            removeMockModal();
+
+            const confirmMessage = String($card.data('confirm-message') || 'Are you sure you want to sync selected data?');
+            const payloadJson = JSON.stringify(payloadInfo.payload, null, 2);
+            const modalHtml = ''
+                + '<div id="w91099ch-mock-sync-modal" class="w91099ch-mock-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="w91099ch-mock-modal-title">'
+                + '  <div class="w91099ch-mock-modal">'
+                + '    <div class="w91099ch-mock-modal-header">'
+                + '      <div class="w91099ch-mock-modal-icon"><i class="fas fa-circle-question" aria-hidden="true"></i></div>'
+                + '      <div>'
+                + '        <h3 id="w91099ch-mock-modal-title">Confirm Mock Sync</h3>'
+                + '        <p>' + escapeHtml(confirmMessage) + '</p>'
+                + '      </div>'
+                + '    </div>'
+                + '    <div class="w91099ch-mock-modal-body">'
+                + '      <div class="w91099ch-mock-modal-note">No API call will be made. Only the selected checkboxes below are included.</div>'
+                + '      <pre>' + escapeHtml(payloadJson) + '</pre>'
+                + '    </div>'
+                + '    <div class="w91099ch-mock-modal-actions">'
+                + '      <button type="button" class="mp-btn-secondary" id="w91099ch-mock-sync-cancel">Cancel</button>'
+                + '      <button type="button" class="mp-btn-primary" id="w91099ch-mock-sync-ok"><i class="fas fa-check" aria-hidden="true"></i>OK</button>'
+                + '    </div>'
+                + '  </div>'
+                + '</div>';
+
+            $('body').append(modalHtml);
+
+            $('#w91099ch-mock-sync-cancel').on('click', function() {
+                removeMockModal();
+                $card.find('.w91099ch-mock-sync-status').removeClass('is-success is-error is-loading').text('Mock sync cancelled');
+                $card.find('.w91099ch-mock-sync-button').prop('disabled', false).removeClass('opacity-60 cursor-not-allowed');
+            });
+
+            $('#w91099ch-mock-sync-ok').on('click', function() {
+                const $button = $card.find('.w91099ch-mock-sync-button');
+                const $status = $card.find('.w91099ch-mock-sync-status');
+
+                removeMockModal();
+                $button.prop('disabled', true).addClass('opacity-60 cursor-not-allowed');
+                $status.removeClass('is-success is-error').addClass('is-loading').text('Finalizing mock sync...');
+
+                window.setTimeout(function() {
+                    $button.prop('disabled', false).removeClass('opacity-60 cursor-not-allowed');
+
+                    if (payloadInfo.count === 0) {
+                        $status.removeClass('is-success is-loading').addClass('is-error').text('Mock failure: no selected data was included in the payload');
+                        return;
+                    }
+
+                    $status.removeClass('is-error is-loading').addClass('is-success').text('Mock success: selected data payload prepared');
+
+                    if (window.w91099chConsole && typeof window.w91099chConsole.log === 'function') {
+                        window.w91099chConsole.log('Mock sync payload:', payloadInfo.payload);
+                    }
+                }, 700);
+            });
+        }
+
+        $cards.each(function() {
+            updateCardState($(this));
+        });
+
+        $(document).off('change.mockDataSync').on('change.mockDataSync', '.w91099ch-mock-sync-card input[type="checkbox"]', function() {
+            updateCardState($(this).closest('.w91099ch-mock-sync-card'));
+        });
+
+        $(document).off('click.mockDataSync').on('click.mockDataSync', '.w91099ch-mock-sync-button', function() {
+            const $button = $(this);
+            const $card = $button.closest('.w91099ch-mock-sync-card');
+            const $status = $card.find('.w91099ch-mock-sync-status');
+
+            if (!$card.find('.w91099ch-mock-sync-consent').is(':checked')) {
+                updateCardState($card);
+                return;
+            }
+
+            const payloadInfo = getPayload($card);
+
+            $button.prop('disabled', true).addClass('opacity-60 cursor-not-allowed');
+            $status.removeClass('is-success is-error').addClass('is-loading').text('Preparing selected mock payload...');
+
+            window.setTimeout(function() {
+                $status.removeClass('is-loading').text('Waiting for confirmation');
+                showMockConfirmation($card, payloadInfo);
+            }, 650);
+        });
+
+        $(document).off('click.mockDataSyncBackdrop').on('click.mockDataSyncBackdrop', '#w91099ch-mock-sync-modal', function(event) {
+            if (event.target === this) {
+                $('#w91099ch-mock-sync-cancel').trigger('click');
+            }
+        });
+    }
+
+    initMockDataSyncModules();
+
     // Load ecommerce plugins data on page load
     function loadEcommercePlugins() {
         const $tableBody = $('#ecommerce-table-body');
@@ -3654,4 +3792,3 @@ jQuery(document).ready(function($) {
     }
 
 });
-

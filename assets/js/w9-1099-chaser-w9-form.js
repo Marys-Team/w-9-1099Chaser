@@ -3728,4 +3728,173 @@ It's completely free and very easy to use.`);
             }
         });
     };
+
+    function w91099chEscapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function initMockDataSyncModules() {
+        const $cards = $('.w91099ch-mock-sync-card');
+        if (!$cards.length) {
+            return;
+        }
+
+        function getPayload($card) {
+            const moduleId = String($card.data('module-id') || '');
+            const title = $.trim($card.find('h3').first().text());
+            const payload = {
+                module: moduleId,
+                title: title,
+                selected: {}
+            };
+            let selectedCount = 0;
+
+            $card.find('.w91099ch-mock-sync-item:checked').each(function() {
+                const group = String($(this).data('group') || '');
+                const item = String($(this).data('item') || '');
+
+                if (!group || !item) {
+                    return;
+                }
+
+                if (!payload.selected[group]) {
+                    payload.selected[group] = [];
+                }
+
+                payload.selected[group].push(item);
+                selectedCount++;
+            });
+
+            return {
+                payload: payload,
+                count: selectedCount
+            };
+        }
+
+        function updateCardState($card) {
+            const hasConsent = $card.find('.w91099ch-mock-sync-consent').is(':checked');
+            const $button = $card.find('.w91099ch-mock-sync-button');
+            const $status = $card.find('.w91099ch-mock-sync-status');
+            const payloadInfo = getPayload($card);
+
+            $card.find('.w91099ch-mock-sync-option').each(function() {
+                $(this).toggleClass('is-excluded', !$(this).find('.w91099ch-mock-sync-item').is(':checked'));
+            });
+
+            $card.find('.w91099ch-mock-payload-preview').text(JSON.stringify(payloadInfo.payload, null, 2));
+            $card.find('.w91099ch-mock-payload-count').text(payloadInfo.count + ' selected');
+
+            $button.prop('disabled', !hasConsent);
+
+            if (!hasConsent) {
+                $status.removeClass('is-success is-error is-loading').text('Check consent to enable sync');
+            } else if (payloadInfo.count === 0) {
+                $status.removeClass('is-success is-loading').addClass('is-error').text('Select at least one item to include in the mock payload');
+            } else {
+                $status.removeClass('is-success is-error is-loading').text('Ready for mock sync');
+            }
+        }
+
+        function removeMockModal() {
+            $('#w91099ch-mock-sync-modal').remove();
+        }
+
+        function showMockConfirmation($card, payloadInfo) {
+            removeMockModal();
+
+            const confirmMessage = String($card.data('confirm-message') || 'Are you sure you want to sync selected data?');
+            const payloadJson = JSON.stringify(payloadInfo.payload, null, 2);
+            const modalHtml = ''
+                + '<div id="w91099ch-mock-sync-modal" class="w91099ch-mock-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="w91099ch-mock-modal-title">'
+                + '  <div class="w91099ch-mock-modal">'
+                + '    <div class="w91099ch-mock-modal-header">'
+                + '      <div class="w91099ch-mock-modal-icon"><i class="fas fa-circle-question" aria-hidden="true"></i></div>'
+                + '      <div>'
+                + '        <h3 id="w91099ch-mock-modal-title">Confirm Mock Sync</h3>'
+                + '        <p>' + w91099chEscapeHtml(confirmMessage) + '</p>'
+                + '      </div>'
+                + '    </div>'
+                + '    <div class="w91099ch-mock-modal-body">'
+                + '      <div class="w91099ch-mock-modal-note">No API call will be made. Only the selected checkboxes below are included.</div>'
+                + '      <pre>' + w91099chEscapeHtml(payloadJson) + '</pre>'
+                + '    </div>'
+                + '    <div class="w91099ch-mock-modal-actions">'
+                + '      <button type="button" class="w91099ch-mock-modal-cancel" id="w91099ch-mock-sync-cancel">Cancel</button>'
+                + '      <button type="button" class="w91099ch-mock-modal-ok" id="w91099ch-mock-sync-ok"><i class="fas fa-check" aria-hidden="true"></i> OK</button>'
+                + '    </div>'
+                + '  </div>'
+                + '</div>';
+
+            $('body').append(modalHtml);
+
+            $('#w91099ch-mock-sync-cancel').on('click', function() {
+                removeMockModal();
+                $card.find('.w91099ch-mock-sync-status').removeClass('is-success is-error is-loading').text('Mock sync cancelled');
+                $card.find('.w91099ch-mock-sync-button').prop('disabled', false);
+            });
+
+            $('#w91099ch-mock-sync-ok').on('click', function() {
+                const $button = $card.find('.w91099ch-mock-sync-button');
+                const $status = $card.find('.w91099ch-mock-sync-status');
+
+                removeMockModal();
+                $button.prop('disabled', true);
+                $status.removeClass('is-success is-error').addClass('is-loading').text('Finalizing mock sync...');
+
+                window.setTimeout(function() {
+                    $button.prop('disabled', false);
+
+                    if (payloadInfo.count === 0) {
+                        $status.removeClass('is-success is-loading').addClass('is-error').text('Mock failure: no selected data was included in the payload');
+                        return;
+                    }
+
+                    $status.removeClass('is-error is-loading').addClass('is-success').text('Mock success: selected data payload prepared');
+                    w91099chConsole.log('Mock sync payload:', payloadInfo.payload);
+                }, 700);
+            });
+        }
+
+        $cards.each(function() {
+            updateCardState($(this));
+        });
+
+        $(document).off('change.w91099chMockDataSync').on('change.w91099chMockDataSync', '.w91099ch-mock-sync-card input[type="checkbox"]', function() {
+            updateCardState($(this).closest('.w91099ch-mock-sync-card'));
+        });
+
+        $(document).off('click.w91099chMockDataSync').on('click.w91099chMockDataSync', '.w91099ch-mock-sync-button', function() {
+            const $button = $(this);
+            const $card = $button.closest('.w91099ch-mock-sync-card');
+            const $status = $card.find('.w91099ch-mock-sync-status');
+
+            if (!$card.find('.w91099ch-mock-sync-consent').is(':checked')) {
+                updateCardState($card);
+                return;
+            }
+
+            const payloadInfo = getPayload($card);
+
+            $button.prop('disabled', true);
+            $status.removeClass('is-success is-error').addClass('is-loading').text('Preparing selected mock payload...');
+
+            window.setTimeout(function() {
+                $status.removeClass('is-loading').text('Waiting for confirmation');
+                showMockConfirmation($card, payloadInfo);
+            }, 650);
+        });
+
+        $(document).off('click.w91099chMockDataSyncBackdrop').on('click.w91099chMockDataSyncBackdrop', '#w91099ch-mock-sync-modal', function(event) {
+            if (event.target === this) {
+                $('#w91099ch-mock-sync-cancel').trigger('click');
+            }
+        });
+    }
+
+    initMockDataSyncModules();
 });

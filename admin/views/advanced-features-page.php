@@ -63,6 +63,11 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 	.af-disabled-section [aria-disabled="true"] {
 		cursor: not-allowed !important;
 	}
+	.mp-cards-grid.mp-cards-disabled .w91099ch-sync-card {
+		opacity: 0.7;
+		filter: grayscale(30%);
+		pointer-events: none;
+	}
 </style>
 
 <?php if ( false ) : ?>
@@ -1725,7 +1730,7 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 							<h3 class="text-xl font-bold text-gray-800 mb-2">Connection Required</h3>
 							<p class="text-gray-700 mb-4">Please connect to MyPowerly first to enable these advanced features. All buttons and options will be disabled until you connect.</p>
 							<div class="flex flex-wrap gap-4">
-								<a href="<?php echo esc_url( admin_url( 'admin.php?page=w91099ch-dashboard' ) ); ?>#mypowerly-connect-block" class="mp-btn-primary">
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=w91099ch' ) ); ?>#mypowerly-connect-block" class="mp-btn-primary">
 									<i class="fas fa-plug mr-2"></i>Go to Dashboard and Connect
 								</a>
 							</div>
@@ -1815,6 +1820,11 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 						<span class="mp-sync-all-badge"><span class="mp-sync-all-badge-dot" style="background: #6366f1;"></span>Accounting</span>
 						<span class="mp-sync-all-badge"><span class="mp-sync-all-badge-dot" style="background: #0ea5e9;"></span>Wallet/Payout</span>
 						<span class="mp-sync-all-badge"><span class="mp-sync-all-badge-dot" style="background: #f59e0b;"></span>Ecommerce</span>
+						<span class="mp-sync-all-badge"><span class="mp-sync-all-badge-dot" style="background: #1a56db;"></span>Website Content</span>
+						<span class="mp-sync-all-badge"><span class="mp-sync-all-badge-dot" style="background: #059669;"></span>Analytics</span>
+						<span class="mp-sync-all-badge"><span class="mp-sync-all-badge-dot" style="background: #d97706;"></span>System Config</span>
+						<span class="mp-sync-all-badge"><span class="mp-sync-all-badge-dot" style="background: #7c3aed;"></span>Security Access</span>
+						<span class="mp-sync-all-badge"><span class="mp-sync-all-badge-dot" style="background: #e11d48;"></span>Payments</span>
 					</div>
 					</div>
 
@@ -1823,7 +1833,7 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 							<input type="checkbox" id="mypowerly-consent-sync-all" class="h-4 w-4 text-blue-600 border-gray-300 rounded" />
 							<div class="flex-1 text-sm text-gray-700">
 								<div class="font-semibold text-gray-900">Consent required</div>
-							<div class="text-gray-700">I understand that clicking <strong>Sync All Data Now</strong> will send all 10 cards data (Plugins, Affiliates/Vendors, Team/Users, Forms, Memberships, Contractors, Freelancers, Accounting, Wallet/Payout, Ecommerce) to the external Mypowerly service (<code>https://mypowerly.com</code>). No data is stored in WordPress.</div>
+							<div class="text-gray-700">I understand that clicking <strong>Sync All Data Now</strong> will send all 15 cards data (Plugins, Affiliates/Vendors, Team/Users, Forms, Memberships, Contractors, Freelancers, Accounting, Wallet/Payout, Ecommerce, Website Content, Analytics, System Config, Security Access, Payments) to the external Mypowerly service (<code>https://mypowerly.com</code>). No data is stored in WordPress.</div>
 							</div>
 						</div>
 
@@ -1994,6 +2004,71 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 										</div>
 									</div>
 									<div class="text-xs text-gray-600">Wallet and payout data</div>
+								</div>
+
+								<div class="sync-step p-3 bg-gray-50 rounded-xl" data-step="website-content">
+									<div class="flex items-center gap-3 mb-2">
+										<div class="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+											<i class="fas fa-photo-film text-blue-600 icon-tooltip" data-tooltip="Sync website content & media"></i>
+										</div>
+										<div>
+											<div class="font-semibold text-gray-800">Website Content</div>
+											<div class="step-status step-pending">Pending</div>
+										</div>
+									</div>
+									<div class="text-xs text-gray-600">Pages, posts, media & comments</div>
+								</div>
+
+								<div class="sync-step p-3 bg-gray-50 rounded-xl" data-step="analytics">
+									<div class="flex items-center gap-3 mb-2">
+										<div class="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center">
+											<i class="fas fa-chart-line text-green-600 icon-tooltip" data-tooltip="Sync analytics data"></i>
+										</div>
+										<div>
+											<div class="font-semibold text-gray-800">Analytics</div>
+											<div class="step-status step-pending">Pending</div>
+										</div>
+									</div>
+									<div class="text-xs text-gray-600">Sales, tax & customer insights</div>
+								</div>
+
+								<div class="sync-step p-3 bg-gray-50 rounded-xl" data-step="system-config">
+									<div class="flex items-center gap-3 mb-2">
+										<div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center">
+											<i class="fas fa-sliders text-amber-600 icon-tooltip" data-tooltip="Sync system configuration"></i>
+										</div>
+										<div>
+											<div class="font-semibold text-gray-800">System Config</div>
+											<div class="step-status step-pending">Pending</div>
+										</div>
+									</div>
+									<div class="text-xs text-gray-600">Settings, plugins & database</div>
+								</div>
+
+								<div class="sync-step p-3 bg-gray-50 rounded-xl" data-step="security-access">
+									<div class="flex items-center gap-3 mb-2">
+										<div class="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center">
+											<i class="fas fa-shield-halved text-purple-600 icon-tooltip" data-tooltip="Sync security & access data"></i>
+										</div>
+										<div>
+											<div class="font-semibold text-gray-800">Security Access</div>
+											<div class="step-status step-pending">Pending</div>
+										</div>
+									</div>
+									<div class="text-xs text-gray-600">Users, roles & activity logs</div>
+								</div>
+
+								<div class="sync-step p-3 bg-gray-50 rounded-xl" data-step="payments">
+									<div class="flex items-center gap-3 mb-2">
+										<div class="w-9 h-9 rounded-lg bg-rose-100 flex items-center justify-center">
+											<i class="fas fa-credit-card text-rose-600 icon-tooltip" data-tooltip="Sync payment integrations"></i>
+										</div>
+										<div>
+											<div class="font-semibold text-gray-800">Payments</div>
+											<div class="step-status step-pending">Pending</div>
+										</div>
+									</div>
+									<div class="text-xs text-gray-600">Gateways, webhooks & logs</div>
 								</div>
 							</div>
 						</div>
@@ -2891,6 +2966,14 @@ $form_detector         = new w91099ch_Form_Plugin_Detector();
 							<div class="mt-2 text-xs text-gray-500 text-center">
 								<span id="form-sync-status">Check consent to enable sync</span>
 							</div>
+							<div id="sync-form-plugins-result" class="hidden mt-3">
+								<div class="p-4 bg-green-50 rounded-xl border border-green-200">
+									<div class="flex items-center gap-3">
+										<i class="fas fa-circle-check text-green-600"></i>
+										<span class="font-medium text-gray-800 card-sync-result-msg">Form data synced successfully!</span>
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
 
@@ -3013,6 +3096,14 @@ $form_detector         = new w91099ch_Form_Plugin_Detector();
 							<div class="mt-2 text-xs text-gray-500 text-center">
 								<span id="contractor-sync-status">Check consent to enable sync</span>
 							</div>
+							<div id="sync-contractor-result" class="hidden mt-3">
+								<div class="p-4 bg-green-50 rounded-xl border border-green-200">
+									<div class="flex items-center gap-3">
+										<i class="fas fa-circle-check text-green-600"></i>
+										<span class="font-medium text-gray-800 card-sync-result-msg">Contractor data synced successfully!</span>
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
 
@@ -3129,6 +3220,14 @@ $fc_detector         = new w91099ch_Freelancer_Contractor_Plugin_Detector();
 							</button>
 							<div class="mt-2 text-xs text-gray-500 text-center">
 								<span id="freelancer-contractor-sync-status">Check consent to enable sync</span>
+							</div>
+							<div id="sync-freelancer-contractor-result" class="hidden mt-3">
+								<div class="p-4 bg-green-50 rounded-xl border border-green-200">
+									<div class="flex items-center gap-3">
+										<i class="fas fa-circle-check text-green-600"></i>
+										<span class="font-medium text-gray-800 card-sync-result-msg">Freelancer data synced successfully!</span>
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -3249,6 +3348,14 @@ $ab_detector         = new w91099ch_Accounting_Bookkeeping_Plugin_Detector();
 							<div class="mt-2 text-xs text-gray-500 text-center">
 								<span id="accounting-bookkeeping-sync-status">Check consent to enable sync</span>
 							</div>
+							<div id="sync-accounting-bookkeeping-result" class="hidden mt-3">
+								<div class="p-4 bg-green-50 rounded-xl border border-green-200">
+									<div class="flex items-center gap-3">
+										<i class="fas fa-circle-check text-green-600"></i>
+										<span class="font-medium text-gray-800 card-sync-result-msg">Accounting data synced successfully!</span>
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
 
@@ -3364,9 +3471,16 @@ $wp_detector         = new w91099ch_Wallet_Payout_Plugin_Detector();
 							<div class="mt-2 text-xs text-gray-500 text-center">
 								<span id="wallet-payout-sync-status">Check consent to enable sync</span>
 							</div>
+							<div id="sync-wallet-payout-result" class="hidden mt-3">
+								<div class="p-4 bg-green-50 rounded-xl border border-green-200">
+									<div class="flex items-center gap-3">
+										<i class="fas fa-circle-check text-green-600"></i>
+										<span class="font-medium text-gray-800 card-sync-result-msg">Payout data synced successfully!</span>
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
-
 					<div class="mp-card mp-metric-card mp-metric-yellow p-4 flex flex-col h-full">
 						<div class="mp-card-label">Ecommerce Data</div>
 						<div class="flex items-start justify-between gap-3 mb-3">
@@ -3401,10 +3515,84 @@ $wp_detector         = new w91099ch_Wallet_Payout_Plugin_Detector();
 						}
 						$ecom_detector = new w91099ch_Ecommerce_Plugin_Detector();
 						$detected_ecom = $ecom_detector->get_ecommerce_plugins_data();
+
+						$ecom_data_settings = get_option( 'w91099ch_ecommerce_data_settings', array() );
+						if ( ! is_array( $ecom_data_settings ) ) {
+							$ecom_data_settings = array();
+						}
+
+						$ecom_static_fields = array(
+							'orders'        => array( 'id', 'number', 'status', 'currency', 'total', 'date_created', 'customer_id', 'payment_method', 'payment_title' ),
+							'customers'     => array( 'id', 'login', 'email', 'display_name', 'user_registered' ),
+							'products'      => array( 'id', 'name', 'sku', 'price', 'currency', 'status', 'type' ),
+							'payments'      => array( 'order_id', 'order_number', 'status', 'currency', 'amount', 'date_created', 'payment_method', 'payment_title' ),
+							'refunds'       => array( 'id', 'number', 'status', 'currency', 'total', 'date_created', 'customer_id', 'payment_method', 'payment_title' ),
+							'coupons'       => array( 'id', 'code', 'status' ),
+							'subscriptions' => array( 'id', 'status', 'total', 'currency' ),
+							'vendors'       => array( 'id', 'login', 'email', 'display_name', 'user_registered' ),
+							'payouts'       => array(),
+						);
+
+						$ecom_all_plugins = array(
+							'woocommerce' => array(
+								'label'  => 'WooCommerce',
+								'fields' => array( 'orders', 'customers', 'products', 'payments', 'refunds', 'coupons', 'subscriptions', 'payouts', 'vendors' ),
+							),
+							'dokan'       => array(
+								'label'  => 'Dokan',
+								'fields' => array( 'vendors', 'orders', 'customers', 'products', 'payouts', 'refunds' ),
+							),
+							'wcfm'        => array(
+								'label'  => 'WCFM',
+								'fields' => array( 'vendors', 'orders', 'customers', 'products', 'payouts', 'refunds' ),
+							),
+							'stripe'      => array(
+								'label'  => 'Stripe',
+								'fields' => array( 'payments', 'refunds', 'payouts' ),
+							),
+							'paypal'      => array(
+								'label'  => 'PayPal',
+								'fields' => array( 'payments', 'refunds', 'payouts' ),
+							),
+						);
+						$field_labels = array(
+							'orders'        => 'Orders',
+							'customers'     => 'Customers',
+							'products'      => 'Products',
+							'payments'      => 'Payments',
+							'refunds'       => 'Refunds',
+							'coupons'       => 'Coupons',
+							'subscriptions' => 'Subscriptions',
+							'payouts'       => 'Payouts',
+							'vendors'       => 'Vendors',
+						);
+						$ecom_preview_data = array();
+						foreach ( $ecom_all_plugins as $slug => $def ) {
+							$cfg = isset( $ecom_data_settings[ $slug ] ) && is_array( $ecom_data_settings[ $slug ] ) ? $ecom_data_settings[ $slug ] : array();
+							$fields_cfg = ( isset( $cfg['fields'] ) && is_array( $cfg['fields'] ) ) ? $cfg['fields'] : array();
+							$selected_fields = array();
+							foreach ( $def['fields'] as $fkey ) {
+								if ( isset( $fields_cfg[ $fkey ] ) && (bool) $fields_cfg[ $fkey ] ) {
+									$selected_fields[] = $fkey;
+								}
+							}
+							$sheet = array();
+							foreach ( $def['fields'] as $fkey ) {
+								$label = isset( $field_labels[ $fkey ] ) ? $field_labels[ $fkey ] : ucfirst( $fkey );
+								$enabled = in_array( $fkey, $selected_fields, true );
+								$sheet[ $label ] = $enabled ? ( isset( $detected_ecom[ $slug ] ) ? 'Sync to fetch data' : 'Plugin not detected' ) : 'Not enabled';
+							}
+							$sheet['Include in ecommerce sync'] = $selected_fields;
+							$ecom_preview_data[ $def['label'] ] = $sheet;
+						}
+						$ecom_payload_json = ! empty( $ecom_preview_data ) ? wp_json_encode( $ecom_preview_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) : '{}';
 						?>
 
-						<div class="mb-4" style="flex: 1;">
-							<h5 class="font-bold text-gray-800 mb-3">Detected Platforms</h5>
+						<div class="mb-3" style="flex: 1;">
+							<div class="flex items-center justify-between mb-3">
+								<h5 class="font-bold text-gray-800">Detected Platforms</h5>
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=w91099ch-settings&w91099ch_settings_tab=ecommerce-data' ) ); ?>" style="color: #2563eb; font-size: 13px; text-decoration: underline; cursor: pointer;">click here for individual plugin setting</a>
+							</div>
 							<div class="bg-gray-50 rounded-xl p-4">
 								<?php if ( ! empty( $detected_ecom ) ) : ?>
 									<div class="space-y-3">
@@ -3427,6 +3615,14 @@ $wp_detector         = new w91099ch_Wallet_Payout_Plugin_Detector();
 									</div>
 								<?php endif; ?>
 							</div>
+
+							<div class="mt-3 w91099ch-sync-payload-box" style="border-radius: 10px; border: 1px solid #e5e7eb; background: #f9fafb; overflow: hidden;">
+								<div class="w91099ch-sync-payload-header" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f3f4f6; border-bottom: 1px solid #e5e7eb;">
+									<span style="font-weight: 600; font-size: 12px; color: #374151;">Expected Payload Structure</span>
+									<span id="ecommerce-payload-count" class="w91099ch-sync-payload-count" style="font-size: 11px; color: #6b7280;"><?php echo count( $ecom_preview_data ); ?> platforms</span>
+								</div>
+								<pre id="ecommerce-payload-pre" class="w91099ch-sync-payload-pre" style="margin: 0; padding: 10px 12px; font-size: 11px; line-height: 1.5; max-height: 200px; overflow: auto; background: transparent; white-space: pre-wrap;"><?php echo esc_html( $ecom_payload_json ); ?></pre>
+							</div>
 						</div>
 
 						<div class="space-y-3 mt-auto">
@@ -3444,10 +3640,224 @@ $wp_detector         = new w91099ch_Wallet_Payout_Plugin_Detector();
 							<div class="mt-2 text-xs text-gray-500 text-center">
 								<span id="ecommerce-sync-status">Check consent to enable sync</span>
 							</div>
+
+							<div class="hidden" id="ecommerce-sync-progress-section">
+								<div class="mb-3">
+									<div class="mp-progress-bar">
+										<div id="ecommerce-sync-progress-fill" class="mp-progress-fill" style="width: 0%"></div>
+									</div>
+								</div>
+								<div class="flex justify-between items-center text-sm">
+									<span id="ecommerce-sync-progress-text" class="font-medium text-blue-600">0%</span>
+									<span id="current-ecommerce-sync-step" class="text-gray-600">Initializing...</span>
+								</div>
+							</div>
+
+							<div class="hidden" id="ecommerce-sync-results">
+								<div class="p-4 bg-green-50 rounded-xl border border-green-200">
+									<div class="flex items-center justify-between">
+										<div class="flex items-center gap-3">
+											<i class="fas fa-circle-check text-green-600"></i>
+											<span id="ecommerce-sync-result-message" class="font-medium text-gray-800">Ecommerce data synced successfully!</span>
+										</div>
+										<span class="text-sm text-gray-600">Time: <span id="ecommerce-sync-duration" class="font-medium">0s</span></span>
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
 				</div>
 			</div>
+
+			<?php
+				$w91099ch_ext_modules = array(
+					array(
+						'id'      => 'website-content-media-assets',
+						'label'   => 'Website Content',
+						'icon'    => 'fa-photo-film',
+						'accent'  => '#1a56db',
+						'title'   => 'Website Content & Media Assets Sync',
+						'subtitle'=> 'Sync pages, posts, media, comments and taxonomy data',
+						'consent' => 'I agree to sync Website Content & Media Assets data',
+						'confirm' => 'Are you sure you want to sync selected content data?',
+						'groups'  => array(
+							'Standard Pages & Posts' => array( 'Homepage', 'Privacy Policy', 'Blog Posts', 'Publishing Dates', 'Authors', 'SEO Metadata' ),
+							'Media Library'          => array( 'Images (original files)', 'Product Gallery Photos', 'PDFs / Downloads', 'Videos', 'Alt Text Data' ),
+							'Comments & Reviews'     => array( 'Reviewer Names', 'Emails', 'Star Ratings', 'Comment Text', 'Approval Status', 'Timestamps' ),
+							'Categories & Tags'      => array( 'Product Categories', 'Blog Categories', 'Tags', 'Hierarchical Structure', 'URL Slugs' ),
+						),
+					),
+					array(
+						'id'      => 'analytics-customer-relationship',
+						'label'   => 'Analytics',
+						'icon'    => 'fa-chart-line',
+						'accent'  => '#059669',
+						'title'   => 'Analytics & Customer Relationship Data Sync',
+						'subtitle'=> 'Sync sales, tax, customer and behavioral insights',
+						'consent' => 'I agree to sync Analytics & Customer Relationship data',
+						'confirm' => 'Are you sure you want to sync selected analytics data?',
+						'groups'  => array(
+							'Analytics Reports'    => array( 'Gross Sales', 'Net Sales', 'Refund Totals', 'Total Orders', 'Product Quantity Sales' ),
+							'Tax & Shipping Setup' => array( 'Tax Rates (State/Zip)', 'Shipping Zones', 'Shipping Class Rules', 'Flat Rate Pricing' ),
+							'Customer Behavior'    => array( 'Wishlist Data', 'Abandoned Carts', 'Cart Emails', 'Cart Items', 'Checkout Timestamps' ),
+						),
+					),
+					array(
+						'id'      => 'system-configuration-design',
+						'label'   => 'System Config',
+						'icon'    => 'fa-sliders',
+						'accent'  => '#d97706',
+						'title'   => 'System Configuration & Design Sync',
+						'subtitle'=> 'Sync system settings, plugins, theme and database structure',
+						'consent' => 'I agree to sync System Configuration & Design data',
+						'confirm' => 'Are you sure you want to sync selected configuration data?',
+						'groups'  => array(
+							'WordPress Settings' => array( 'Site Title', 'Tagline', 'Permalinks', 'Timezone', 'Reading/Writing Settings' ),
+							'Plugin Settings'    => array( 'SEO Configurations', 'Cache Settings', 'Form Plugin Config', 'Security Plugin Settings', 'JSON Export Settings' ),
+							'Theme Customizer'   => array( 'Layout Settings', 'Color Schemes', 'Typography', 'Widget Layouts' ),
+							'Database Structure' => array( 'wp_posts', 'wp_options', 'wp_postmeta', 'Custom SQL Tables' ),
+						),
+					),
+					array(
+						'id'      => 'user-security-system-access',
+						'label'   => 'Security Access',
+						'icon'    => 'fa-shield-halved',
+						'accent'  => '#7c3aed',
+						'title'   => 'User Security & System Access Sync',
+						'subtitle'=> 'Sync user accounts, roles and system activity logs',
+						'consent' => 'I agree to sync User Security & System Access data',
+						'confirm' => 'Are you sure you want to sync selected security data?',
+						'groups'  => array(
+							'User Accounts' => array( 'User Profiles', 'Roles (Admin, Shop Manager, Customer)', 'Account Meta Fields', 'Encrypted Password Hashes' ),
+							'Activity Logs' => array( 'Login History', 'IP Tracking Logs', 'Admin Actions', 'File Modification Logs', 'Security Events' ),
+						),
+					),
+					array(
+						'id'      => 'payment-gateway-third-party-integrations',
+						'label'   => 'Payments',
+						'icon'    => 'fa-credit-card',
+						'accent'  => '#7c3aed',
+						'title'   => 'Payment Gateway & Third-Party Integrations Sync',
+						'subtitle'=> 'Sync API keys, webhooks and payment gateway logs',
+						'consent' => 'I agree to sync Payment & Integration data',
+						'confirm' => 'Are you sure you want to sync selected payment and integration data?',
+						'groups'  => array(
+							'API Keys'     => array( 'ERP System Keys', 'Shipping Carrier Keys', 'External Tool Keys' ),
+							'Webhooks'     => array( 'Webhook URLs', 'Event Triggers', 'Delivery Endpoints' ),
+							'Payment Logs' => array( 'Stripe Logs', 'PayPal Logs', 'Transaction Debug Logs' ),
+						),
+					),
+				);
+				?>
+				<div class="w91099ch-sync-grid mp-cards-grid grid grid-cols-1 md:grid-cols-3 gap-6 <?php echo ( ! $mp_connected ) ? 'mp-cards-disabled' : ''; ?>">
+					<?php
+					$w91099ch_sync_nonce = wp_create_nonce( 'w91099ch_nonce' );
+					foreach ( $w91099ch_ext_modules as $w91099ch_mod ) :
+					?>
+						<div class="w91099ch-sync-card"
+							data-module-id="<?php echo esc_attr( $w91099ch_mod['id'] ); ?>"
+							data-confirm-message="<?php echo esc_attr( $w91099ch_mod['confirm'] ); ?>"
+							data-nonce="<?php echo esc_attr( $w91099ch_sync_nonce ); ?>"
+							style="--accent: <?php echo esc_attr( $w91099ch_mod['accent'] ); ?>;">
+
+							<div class="w91099ch-sync-card-label"><?php echo esc_html( $w91099ch_mod['label'] ); ?></div>
+
+							<div class="w91099ch-sync-card-head">
+								<div class="w91099ch-sync-card-icon">
+									<i class="fas <?php echo esc_attr( $w91099ch_mod['icon'] ); ?>"></i>
+								</div>
+								<div>
+									<h3><?php echo esc_html( $w91099ch_mod['title'] ); ?></h3>
+									<p><?php echo esc_html( $w91099ch_mod['subtitle'] ); ?></p>
+								</div>
+							</div>
+
+							<div class="w91099ch-sync-groups">
+								<?php foreach ( $w91099ch_mod['groups'] as $w91099ch_grp_label => $w91099ch_items ) : ?>
+									<div class="w91099ch-sync-group">
+										<div class="w91099ch-sync-group-head">
+											<label class="w91099ch-sync-group-toggle">
+												<input type="checkbox"
+													class="w91099ch-sync-group-check"
+													checked="checked"
+													data-group-label="<?php echo esc_attr( $w91099ch_grp_label ); ?>" />
+												<span><?php echo esc_html( $w91099ch_grp_label ); ?></span>
+											</label>
+											<button type="button" class="w91099ch-sync-group-expand is-collapsed" aria-expanded="false">
+												<i class="fas fa-chevron-up"></i>
+											</button>
+										</div>
+										<div class="w91099ch-sync-group-body is-collapsed">
+											<div class="w91099ch-sync-options">
+												<?php foreach ( $w91099ch_items as $w91099ch_item ) :
+													$w91099ch_item_id = 'w91099ch-adm-' . $w91099ch_mod['id'] . '-' . sanitize_title( $w91099ch_grp_label ) . '-' . sanitize_title( $w91099ch_item );
+												?>
+													<label class="w91099ch-sync-option">
+														<input type="checkbox"
+															class="w91099ch-sync-item"
+															id="<?php echo esc_attr( $w91099ch_item_id ); ?>"
+															data-group="<?php echo esc_attr( $w91099ch_grp_label ); ?>"
+															data-item="<?php echo esc_attr( $w91099ch_item ); ?>"
+															checked="checked" />
+														<span><?php echo esc_html( $w91099ch_item ); ?></span>
+													</label>
+												<?php endforeach; ?>
+											</div>
+										</div>
+									</div>
+								<?php endforeach; ?>
+							</div>
+
+							<div class="w91099ch-sync-payload-box">
+								<div class="w91099ch-sync-payload-header">
+									<span>Selected JSON Payload</span>
+									<span class="w91099ch-sync-payload-count">0 selected</span>
+								</div>
+								<pre class="w91099ch-sync-payload-pre">{}</pre>
+							</div>
+
+							<div class="w91099ch-sync-footer">
+								<div class="w91099ch-sync-consent-wrap">
+									<input type="checkbox"
+										class="w91099ch-sync-consent"
+										id="w91099ch-adm-consent-<?php echo esc_attr( $w91099ch_mod['id'] ); ?>" />
+									<label for="w91099ch-adm-consent-<?php echo esc_attr( $w91099ch_mod['id'] ); ?>">
+										<strong>Consent required</strong><br>
+										<?php echo esc_html( $w91099ch_mod['consent'] ); ?>
+									</label>
+								</div>
+
+								<input type="hidden" class="w91099ch-sync-nonce" value="<?php echo esc_attr( $w91099ch_sync_nonce ); ?>" />
+								<button type="button" class="w91099ch-sync-btn" disabled>
+									<i class="fas fa-rotate"></i> Sync Selected Data
+								</button>
+
+								<div class="w91099ch-sync-status">Check consent to enable sync</div>
+							</div>
+						</div>
+					<?php endforeach; ?>
+				</div>
+
+				<!-- Shared Confirmation Modal for admin ext modules -->
+				<div class="w91099ch-modal-overlay" id="w91099ch-sc-modal" style="display:none;" role="dialog" aria-modal="true">
+					<div class="w91099ch-modal">
+						<div class="w91099ch-modal-head">
+							<i class="fas fa-circle-question"></i>
+							<div>
+								<h3>Confirm Mock Sync</h3>
+								<p class="w91099ch-modal-confirm-msg"></p>
+							</div>
+						</div>
+						<div class="w91099ch-modal-body">
+							<div class="w91099ch-modal-note">No API call will be made. Only selected checkboxes are included.</div>
+							<pre class="w91099ch-modal-payload"></pre>
+						</div>
+						<div class="w91099ch-modal-actions">
+							<button type="button" class="w91099ch-btn-cancel" id="w91099ch-sc-cancel">Cancel</button>
+							<button type="button" class="w91099ch-btn-ok" id="w91099ch-sc-ok"><i class="fas fa-check"></i> OK</button>
+						</div>
+					</div>
+				</div>
 			<?php if ( ! $mp_connected ) : ?>
 				</fieldset>
 			<?php endif; ?>
@@ -3807,166 +4217,113 @@ jQuery(document).ready(function($) {
 	// setupConsentGate is defined in assets/js/w9-1099-chaser-admin-page-inline.js
 	// Removing duplicate definition here to avoid conflicts
 
-	// Additional explicit handler for ecommerce consent to ensure it works
-	$('#ecommerce-consent').off('change.ecommerceExplicit').on('change.ecommerceExplicit', function() {
-		const $btn = $('#sync-ecommerce-btn');
-		const $status = $('#ecommerce-sync-status');
-		if ($(this).is(':checked')) {
-			$btn.prop('disabled', false);
-			$btn.removeAttr('disabled');
-			$btn.removeClass('opacity-60 cursor-not-allowed');
-			$status.text('Ready');
-		} else {
-			$btn.prop('disabled', true);
-			$btn.attr('disabled', 'disabled');
-			$btn.addClass('opacity-60 cursor-not-allowed');
-			$status.text('Check consent to enable sync');
-		}
-	});
-
-	// Initialize ecommerce button state based on checkbox
-	if ($('#ecommerce-consent').is(':checked')) {
-		$('#sync-ecommerce-btn').prop('disabled', false);
-		$('#sync-ecommerce-btn').removeAttr('disabled');
-		$('#sync-ecommerce-btn').removeClass('opacity-60 cursor-not-allowed');
-		$('#ecommerce-sync-status').text('Ready');
-	}
-
-	window.handleSyncEcommerceClick = function(btn) {
-		const $button = jQuery(btn);
-		const $status = jQuery('#ecommerce-sync-status');
-		
-		if (!window.confirm('Are you sure you want to send ecommerce platform data to Mypowerly?')) {
+	// Ecommerce sync click handler with progress bar
+	$('#sync-ecommerce-btn').off('click.cardSync').off('click.syncEcommerce').on('click.syncEcommerce', function() {
+		if (!$('#ecommerce-consent').is(':checked')) {
+			window.alert('Please check the consent checkbox to enable sending ecommerce data to the external service.');
 			return;
 		}
-
-		if (!window.w91099chConnector || !window.w91099chConnector.ajaxurl) {
-			window.alert('Connector configuration missing (ajaxurl). Please reload the page.');
-			return;
-		}
-
-		$button.prop('disabled', true);
-		$status.text('Syncing...');
-
-		jQuery.ajax({
-			url: window.w91099chConnector.ajaxurl,
-			type: 'POST',
-			data: {
-				action: 'w91099ch_sync_ecommerce_data',
-				nonce: window.w91099chConnector.nonce
-			},
-			success: function(response) {
-				if (response && response.success) {
-					$status.text('Ready');
-					window.alert('✅ Ecommerce data synced successfully via webhook!');
-				} else {
-					const msg = (response && response.data) ? (response.data.message || response.data) : 'Ecommerce sync failed';
-					$status.text('Error');
-					window.alert('❌ ' + msg);
-				}
-			},
-			error: function(xhr, status, error) {
-				$status.text('Error');
-				window.alert('❌ Ecommerce sync error: ' + error);
-			},
-			complete: function() {
-				$button.prop('disabled', false);
-			}
-		});
-	};
-
-	$('#sync-ecommerce-btn').off('click.syncEcommerce').on('click.syncEcommerce', function() {
 		if (!confirmSendToMypowerly('ecommerce platform data')) {
 			return;
 		}
-		if (!window.w91099chConnector || !window.w91099chConnector.ajaxurl) {
-			window.alert('Connector configuration missing (ajaxurl). Please reload the page.');
-			return;
-		}
-		if (!window.w91099chConnector.nonce) {
-			window.alert('Security nonce missing. Please reload the page.');
-			return;
-		}
 
 		const $button = $(this);
+		const $progressSection = $('#ecommerce-sync-progress-section');
+		const $resultsSection = $('#ecommerce-sync-results');
+		const $progressFill = $('#ecommerce-sync-progress-fill');
+		const $progressText = $('#ecommerce-sync-progress-text');
+		const $currentStep = $('#current-ecommerce-sync-step');
+		const $duration = $('#ecommerce-sync-duration');
+		const $resultMsg = $('#ecommerce-sync-result-message');
 		const $status = $('#ecommerce-sync-status');
+		const $payloadPre = $('#ecommerce-payload-pre');
+		const $payloadCount = $('#ecommerce-payload-count');
+
+		const startTime = Date.now();
+		$resultsSection.hide();
+		$progressSection.show();
 		$button.prop('disabled', true);
+		$progressFill.css('width', '10%');
+		$progressText.text('10%');
+		$currentStep.text('Syncing ecommerce data...');
 		$status.text('Syncing...');
 
+		const ajaxUrl = (typeof window.w91099chConnector !== 'undefined' && window.w91099chConnector && window.w91099chConnector.ajaxurl)
+			? window.w91099chConnector.ajaxurl
+			: (typeof window.ajaxurl !== 'undefined' ? window.ajaxurl : '');
+
+		const ajaxNonce = (typeof window.w91099chConnector !== 'undefined' && window.w91099chConnector && window.w91099chConnector.nonce)
+			? window.w91099chConnector.nonce
+			: '';
+
+		if (!ajaxUrl) {
+			$button.prop('disabled', false);
+			$progressSection.hide();
+			alert('❌ AJAX URL is missing. Please reload the admin page.');
+			return;
+		}
+
+		if (!ajaxNonce) {
+			$button.prop('disabled', false);
+			$progressSection.hide();
+			alert('❌ Security nonce is missing. Please reload the admin page.');
+			return;
+		}
+
 		$.ajax({
-			url: window.w91099chConnector.ajaxurl,
+			url: ajaxUrl,
 			type: 'POST',
+			dataType: 'json',
 			data: {
 				action: 'w91099ch_sync_ecommerce_data',
-				nonce: window.w91099chConnector.nonce
+				nonce: ajaxNonce
 			},
 			success: function(response) {
 				if (response && response.success) {
+					$progressFill.css('width', '100%');
+					$progressText.text('100%');
+					$currentStep.text('✅ Ecommerce data synced successfully!');
+
+					const duration = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+					$duration.text(duration);
+					$resultMsg.text('Ecommerce data synced successfully!');
+
+					if (response.data && response.data.sheets) {
+						const sheets = response.data.sheets;
+						const jsonStr = JSON.stringify(sheets, null, 2);
+						$payloadPre.text(jsonStr);
+						const platformCount = Object.keys(sheets).length;
+						$payloadCount.text(platformCount + ' platforms');
+					}
+
 					$status.text('Ready');
-					window.alert('✅ Ecommerce data synced successfully via webhook!');
+					const webhookInfo = buildWebhookStatusText(response.data && response.data.webhook_status);
+					const alertMsg = '✅ Ecommerce data synced successfully!' + (webhookInfo ? ' | ' + webhookInfo : '');
+
+					setTimeout(function() {
+						$progressSection.hide();
+						$resultsSection.show();
+						$button.prop('disabled', false);
+					}, 300);
 				} else {
 					const msg = safeExtractErrorMessage(response, 'Ecommerce sync failed');
+					$button.prop('disabled', false);
+					$progressSection.hide();
 					$status.text('Error');
-					window.alert('❌ ' + msg);
+					alert('❌ ' + msg);
 				}
 			},
 			error: function(xhr, status, error) {
-				const msg = safeExtractErrorMessage(xhr.responseText || error, 'Ecommerce sync error');
-				$status.text('Error');
-				window.alert('❌ ' + msg);
-			},
-			complete: function() {
 				$button.prop('disabled', false);
+				$progressSection.hide();
+				const msg = safeExtractErrorMessage(xhr.responseText || error, 'Ecommerce sync connection error');
+				$status.text('Error');
+				alert('❌ ' + msg);
 			}
 		});
 	});
 
-	$('#plugin-sync').off('click.pluginSync').on('click.pluginSync', function() {
-		if (!$('#mypowerly-consent-plugin-sync').is(':checked')) {
-			window.alert('Please check the consent checkbox to enable sending plugin data to the external service.');
-			return;
-		}
-		if (!confirmSendToMypowerly('plugin data')) {
-			return;
-		}
-
-		const $button = $(this);
-		const $status = $('#plugin-sync-status');
-		$button.prop('disabled', true);
-		$status.text('Syncing...');
-
-		$.ajax({
-			url: window.w91099chConnector.ajaxurl,
-			type: 'POST',
-			data: {
-				action: 'w91099ch_sync_plugin_data',
-				nonce: window.w91099chConnector.nonce
-			},
-			success: function(response) {
-				if (response && response.success) {
-					const now = new Date();
-					$('#last-plugin-sync-time').text(now.toLocaleString());
-					$status.text('Ready');
-					if (typeof loadDetectedPlugins === 'function') {
-						loadDetectedPlugins();
-					}
-					window.alert('✅ Plugins synced successfully!');
-				} else {
-					const msg = safeExtractErrorMessage(response, 'Plugin sync failed');
-					$status.text('Error');
-					window.alert('❌ ' + msg);
-				}
-			},
-			error: function(xhr, status, error) {
-				const msg = safeExtractErrorMessage(xhr.responseText || error, 'Plugin sync error');
-				$status.text('Error');
-				window.alert('❌ ' + msg);
-			},
-			complete: function() {
-				$button.prop('disabled', false);
-			}
-		});
-	});
+	// plugin-sync click handled by assets/js/w9-1099-chaser-admin-page-inline.js
 
 	$('#refresh-plugins').off('click.refreshPlugins').on('click.refreshPlugins', function() {
 		const $btn = $(this);
@@ -4019,12 +4376,11 @@ jQuery(document).ready(function($) {
 		});
 	});
 
-	$('#affiliates-sync').off('click.affiliatesSync').on('click.affiliatesSync', function() {
+	// affiliates-sync and team-sync click handled below via delegated events
+
+	$(document).off('click.affiliatesSync').on('click.affiliatesSync', '#affiliates-sync', function() {
 		if (!$('#mypowerly-consent-affiliates-sync').is(':checked')) {
 			window.alert('Please check the consent checkbox to enable sending affiliate/vendor data to the external service.');
-			return;
-		}
-		if (!confirmSendToMypowerly('affiliate/vendor data')) {
 			return;
 		}
 		const $button = $('#affiliates-sync');
@@ -4142,22 +4498,14 @@ jQuery(document).ready(function($) {
 			}
 		});
 	});
+
 	// Sync All handled in assets/js/w9-1099-chaser-admin-page-inline.js
-	// Team/User Invite Members (Card 4)
-	$('#team-sync').off('click.teamInvite').on('click.teamInvite', function() {
+
+	$(document).off('click.teamInvite').on('click.teamInvite', '#team-sync', function() {
 		if (!$('#mypowerly-consent-team-sync').is(':checked')) {
 			window.alert('Please check the consent checkbox to enable sending team/user data to the external service.');
 			return;
 		}
-		if (!confirmSendToMypowerly('team/user data')) {
-			return;
-		}
-
-		// Require consent
-		if (!window.confirm('Confirm: invite the currently displayed users to the workspace team?')) {
-			return;
-		}
-
 		syncTeamData();
 	});
 

@@ -69,7 +69,9 @@ jQuery(document).ready(function($) {
                             <button id="w9-submit-deactivate" style="background: #f3e8ff; color: #000; border: none; border-radius: 4px; padding: 10px 24px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s;">
                                 Submit & Deactivate
                             </button>
-                            <a href="${deactivationUrl}" style="color: #6b7280; text-decoration: none; font-size: 14px; font-weight: 500;">Skip & Deactivate</a>
+                            <button id="w9-cancel-deactivate" style="background: #e5e7eb; color: #374151; border: none; border-radius: 4px; padding: 10px 24px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.2s;">
+                                Cancel
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -87,7 +89,7 @@ jQuery(document).ready(function($) {
         $('#w9-submit-deactivate').on('click', function() {
             var reason = $('input[name="w9_deactivate_reason"]:checked').val();
             if (!reason) {
-                alert('Please select a reason or click Skip & Deactivate.');
+                alert('Please select a reason.');
                 return;
             }
 
@@ -114,6 +116,11 @@ jQuery(document).ready(function($) {
                     window.location.href = deactivationUrl;
                 }
             });
+        });
+
+        $('#w9-cancel-deactivate').on('click', function() {
+            $('#w9-deactivation-modal').remove();
+            $(document).off('keydown.w9modal');
         });
 
         // Close on escape key

@@ -20,6 +20,7 @@ class w91099ch_Affiliate_Manager {
 		}
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		try {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$found = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
 		} catch (Exception $e) {
 			$this->log( 'Error checking if table exists ' . $table . ': ' . $e->getMessage() );

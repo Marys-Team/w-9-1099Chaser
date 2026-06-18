@@ -48,6 +48,85 @@ $newsletter_subscribed = (bool) get_option( 'w91099ch_newsletter_subscribed', fa
 $admin_email = get_option( 'admin_email' );
 $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
 
+$w91099ch_mock_data_sync_modules = array(
+	array(
+		'id'       => 'website-content-media-assets',
+		'label'    => 'Website Content',
+		'icon'     => 'fa-photo-film',
+		'accent'   => 'mp-metric-blue',
+		'title'    => 'Website Content & Media Assets Sync',
+		'subtitle' => 'Sync pages, posts, media, comments and taxonomy data',
+		'consent'  => 'I agree to sync Website Content & Media Assets data',
+		'confirm'  => 'Are you sure you want to sync selected content data?',
+		'groups'   => array(
+			'Standard Pages & Posts' => array( 'Homepage', 'Privacy Policy', 'Blog Posts', 'Publishing Dates', 'Authors', 'SEO Metadata' ),
+			'Media Library' => array( 'Images (original files)', 'Product Gallery Photos', 'PDFs / Downloads', 'Videos', 'Alt Text Data' ),
+			'Comments & Reviews' => array( 'Reviewer Names', 'Emails', 'Star Ratings', 'Comment Text', 'Approval Status', 'Timestamps' ),
+			'Categories & Tags' => array( 'Product Categories', 'Blog Categories', 'Tags', 'Hierarchical Structure', 'URL Slugs' ),
+		),
+	),
+	array(
+		'id'       => 'analytics-customer-relationship',
+		'label'    => 'Analytics',
+		'icon'     => 'fa-chart-line',
+		'accent'   => 'mp-metric-green',
+		'title'    => 'Analytics & Customer Relationship Data Sync',
+		'subtitle' => 'Sync sales, tax, customer and behavioral insights',
+		'consent'  => 'I agree to sync Analytics & Customer Relationship data',
+		'confirm'  => 'Are you sure you want to sync selected analytics data?',
+		'groups'   => array(
+			'Analytics Reports' => array( 'Gross Sales', 'Net Sales', 'Refund Totals', 'Total Orders', 'Product Quantity Sales' ),
+			'Tax & Shipping Setup' => array( 'Tax Rates (State/Zip)', 'Shipping Zones', 'Shipping Class Rules', 'Flat Rate Pricing' ),
+			'Customer Behavior' => array( 'Wishlist Data', 'Abandoned Carts', 'Cart Emails', 'Cart Items', 'Checkout Timestamps' ),
+		),
+	),
+	array(
+		'id'       => 'system-configuration-design',
+		'label'    => 'System Config',
+		'icon'     => 'fa-sliders',
+		'accent'   => 'mp-metric-orange',
+		'title'    => 'System Configuration & Design Sync',
+		'subtitle' => 'Sync system settings, plugins, theme and database structure',
+		'consent'  => 'I agree to sync System Configuration & Design data',
+		'confirm'  => 'Are you sure you want to sync selected configuration data?',
+		'groups'   => array(
+			'WordPress Settings' => array( 'Site Title', 'Tagline', 'Permalinks', 'Timezone', 'Reading/Writing Settings' ),
+			'Plugin Settings' => array( 'SEO Configurations', 'Cache Settings', 'Form Plugin Config', 'Security Plugin Settings', 'JSON Export Settings' ),
+			'Theme Customizer' => array( 'Layout Settings', 'Color Schemes', 'Typography', 'Widget Layouts' ),
+			'Database Structure' => array( 'wp_posts', 'wp_options', 'wp_postmeta', 'Custom SQL Tables' ),
+		),
+	),
+	array(
+		'id'       => 'user-security-system-access',
+		'label'    => 'Security Access',
+		'icon'     => 'fa-shield-halved',
+		'accent'   => 'mp-metric-purple',
+		'title'    => 'User Security & System Access Sync',
+		'subtitle' => 'Sync user accounts, roles and system activity logs',
+		'consent'  => 'I agree to sync User Security & System Access data',
+		'confirm'  => 'Are you sure you want to sync selected security data?',
+		'groups'   => array(
+			'User Accounts' => array( 'User Profiles', 'Roles (Admin, Shop Manager, Customer)', 'Account Meta Fields', 'Encrypted Password Hashes' ),
+			'Activity Logs' => array( 'Login History', 'IP Tracking Logs', 'Admin Actions', 'File Modification Logs', 'Security Events' ),
+		),
+	),
+	array(
+		'id'       => 'payment-gateway-third-party-integrations',
+		'label'    => 'Payments',
+		'icon'     => 'fa-credit-card',
+		'accent'   => 'mp-metric-purple',
+		'title'    => 'Payment Gateway & Third-Party Integrations Sync',
+		'subtitle' => 'Sync API keys, webhooks and payment gateway logs',
+		'consent'  => 'I agree to sync Payment & Integration data',
+		'confirm'  => 'Are you sure you want to sync selected payment and integration data?',
+		'groups'   => array(
+			'API Keys' => array( 'ERP System Keys', 'Shipping Carrier Keys', 'External Tool Keys' ),
+			'Webhooks' => array( 'Webhook URLs', 'Event Triggers', 'Delivery Endpoints' ),
+			'Payment Logs' => array( 'Stripe Logs', 'PayPal Logs', 'Transaction Debug Logs' ),
+		),
+	),
+);
+
 ?>
 
 <?php if ( false ) : ?>
@@ -2305,6 +2384,81 @@ $enc_param   = filter_input( INPUT_GET, 'encrypted_credentials', FILTER_SANITIZE
 						</div>
 					</div>
 
+					<div class="mp-cards-grid grid grid-cols-1 md:grid-cols-3 gap-6 <?php echo ( ! $is_connected || empty( $credentials ) ) ? 'mp-cards-disabled' : ''; ?>">
+					<?php foreach ( $w91099ch_mock_data_sync_modules as $module ) : ?>
+						<div class="mp-card mp-metric-card <?php echo esc_attr( $module['accent'] ); ?> w91099ch-mock-sync-card p-4 flex flex-col h-full" data-module-id="<?php echo esc_attr( $module['id'] ); ?>" data-confirm-message="<?php echo esc_attr( $module['confirm'] ); ?>">
+							<div class="mp-card-label"><?php echo esc_html( $module['label'] ); ?></div>
+							<div class="flex items-start justify-between gap-3 mb-3">
+								<div class="flex items-start gap-3">
+									<div class="w-12 h-12 rounded-xl mp-card-icon flex items-center justify-center">
+										<i class="fas <?php echo esc_attr( $module['icon'] ); ?> text-xl" aria-hidden="true"></i>
+									</div>
+									<div>
+										<h3 class="text-base font-bold text-gray-800 mb-1"><?php echo esc_html( $module['title'] ); ?></h3>
+										<p class="text-sm text-gray-600"><?php echo esc_html( $module['subtitle'] ); ?></p>
+									</div>
+								</div>
+
+								<div class="mp-help-tooltip">
+									<button type="button" class="mp-help-icon" aria-label="<?php echo esc_attr( $module['title'] . ' help' ); ?>">
+										<i class="fas fa-circle-question" aria-hidden="true"></i>
+									</button>
+									<div class="mp-help-bubble">
+										<div class="mp-help-title">Mock sync module</div>
+										<div class="mp-help-line"><strong>Behavior:</strong> Builds a JSON payload from selected checkboxes only.</div>
+										<div class="mp-help-line"><strong>API:</strong> No real API request is made and no backend logic is changed.</div>
+										<div class="mp-help-line"><strong>Consent:</strong> The sync button unlocks only after consent is checked.</div>
+									</div>
+								</div>
+							</div>
+
+							<div class="w91099ch-mock-sync-groups">
+								<?php foreach ( $module['groups'] as $group_label => $items ) : ?>
+									<div class="w91099ch-mock-sync-group">
+										<h4><?php echo esc_html( $group_label ); ?></h4>
+										<div class="w91099ch-mock-sync-options">
+											<?php foreach ( $items as $item ) : ?>
+												<?php
+												$item_id = 'w91099ch-' . $module['id'] . '-' . sanitize_title( $group_label ) . '-' . sanitize_title( $item );
+												?>
+												<label class="w91099ch-mock-sync-option">
+													<input type="checkbox" class="w91099ch-mock-sync-item" id="<?php echo esc_attr( $item_id ); ?>" data-group="<?php echo esc_attr( $group_label ); ?>" data-item="<?php echo esc_attr( $item ); ?>" checked="checked" />
+													<span><?php echo esc_html( $item ); ?></span>
+												</label>
+											<?php endforeach; ?>
+										</div>
+									</div>
+								<?php endforeach; ?>
+							</div>
+
+							<div class="w91099ch-mock-payload-box" aria-live="polite">
+								<div class="flex items-center justify-between gap-3 mb-2">
+									<h4 class="font-bold text-gray-800">Selected JSON Payload</h4>
+									<span class="w91099ch-mock-payload-count">0 selected</span>
+								</div>
+								<pre class="w91099ch-mock-payload-preview">{}</pre>
+							</div>
+
+							<div class="space-y-3 mt-auto">
+								<div class="p-3 bg-blue-50 rounded-lg border border-blue-200 flex items-start gap-3">
+									<input type="checkbox" class="w91099ch-mock-sync-consent mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded" id="<?php echo esc_attr( 'w91099ch-consent-' . $module['id'] ); ?>" />
+									<label class="flex-1 text-sm text-gray-700" for="<?php echo esc_attr( 'w91099ch-consent-' . $module['id'] ); ?>">
+										<span class="font-semibold text-gray-900 block">Consent required</span>
+										<span><?php echo esc_html( $module['consent'] ); ?></span>
+									</label>
+								</div>
+
+								<button type="button" class="mp-btn-primary w91099ch-mock-sync-button w-full flex items-center justify-center gap-3 opacity-60 cursor-not-allowed" disabled>
+									<i class="fas fa-rotate" aria-hidden="true"></i>
+									<span>Sync Selected Data</span>
+								</button>
+
+								<div class="w91099ch-mock-sync-status" aria-live="polite">Check consent to enable sync</div>
+							</div>
+						</div>
+					<?php endforeach; ?>
+					</div>
+
 					<!-- Card 4: Form Plugin Detection -->
 					<div class="mp-card mp-metric-card mp-metric-blue p-4 flex flex-col h-full">
 						<div class="mp-card-label">Form Plugins</div>
@@ -3652,8 +3806,8 @@ jQuery(document).ready(function($) {
 	// Govt download handled by assets/js/w9-1099-chaser-w9-form.js (PDFLib browser-side fill)
 	if (typeof window.w91099chConnectorW9 === 'undefined') {
 		window.w91099chConnectorW9 = {
-			ajaxurl: '<?php echo admin_url( 'admin-ajax.php' ); ?>',
-			nonce: '<?php echo wp_create_nonce( 'w91099ch_w9_form_nonce' ); ?>',
+			ajaxurl: '<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>',
+			nonce: '<?php echo esc_attr( wp_create_nonce( 'w91099ch_w9_form_nonce' )); ?>',
 			enableSocialSharing: <?php echo wp_json_encode( get_option( 'w91099ch_enable_social_sharing', false ) ); ?>,
 			enableSecureW9: <?php echo wp_json_encode( get_option( 'w91099ch_enable_secure_w9', false ) ); ?>,
 		};
@@ -4760,7 +4914,5 @@ jQuery(document).ready(function($) {
 </script>
 
 <?php endif; ?>
-
-
 
 

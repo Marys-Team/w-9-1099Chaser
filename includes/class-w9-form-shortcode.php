@@ -131,7 +131,7 @@ class w91099ch_W9_Form_Shortcode {
 				if ( ! empty( $form_html ) ) {
 					$wrapper_style = $this->get_position_wrapper_style( $display_position );
 					echo '<div class="w91099ch-auto-display-wrapper" style="' . esc_attr( $wrapper_style ) . '">';
-					echo $form_html;
+					echo wp_kses_post( $form_html);
 					echo '</div>';
 				}
 			}
@@ -388,6 +388,11 @@ class w91099ch_W9_Form_Shortcode {
 	 * Register assets (styles and scripts) - called early on wp_enqueue_scripts
 	 */
 	public function register_assets() {
+		$w9_css_path = w91099ch_PLUGIN_PATH . 'assets/css/w9-1099-chaser-w9-form.css';
+		$w9_js_path  = w91099ch_PLUGIN_PATH . 'assets/js/w9-1099-chaser-w9-form.js';
+		$w9_css_ver  = file_exists( $w9_css_path ) ? filemtime( $w9_css_path ) : w91099ch_VERSION;
+		$w9_js_ver   = file_exists( $w9_js_path ) ? filemtime( $w9_js_path ) : w91099ch_VERSION;
+
 		// Register styles
 		wp_register_style(
 			'w9-1099-chaser-tailwind',
@@ -414,7 +419,7 @@ class w91099ch_W9_Form_Shortcode {
 			'w9-1099-chaser-w9-form',
 			w91099ch_PLUGIN_URL . 'assets/css/w9-1099-chaser-w9-form.css',
 			array( 'w9-1099-chaser-tailwind', 'w9-1099-chaser-fontawesome', 'w9-1099-chaser-inter' ),
-			w91099ch_VERSION
+			$w9_css_ver
 		);
 
 		// Register scripts
@@ -446,7 +451,7 @@ class w91099ch_W9_Form_Shortcode {
 			'w9-1099-chaser-w9-form',
 			w91099ch_PLUGIN_URL . 'assets/js/w9-1099-chaser-w9-form.js',
 			array( 'jquery', 'w9-1099-chaser-pdf-lib', 'signature-pad' ),
-			w91099ch_VERSION,
+			$w9_js_ver,
 			true
 		);
 
@@ -1449,7 +1454,7 @@ class w91099ch_W9_Form_Shortcode {
 		
 		// Output floating widget and modal
 		echo '<div id="w9-floating-widget" style="' . esc_attr( $position_css ) . '">';
-		echo $widget_html;
+		echo wp_kses_post( $widget_html);
 		echo '</div>';
 		
 		// Add modal for form
@@ -1457,7 +1462,7 @@ class w91099ch_W9_Form_Shortcode {
 		echo '<div style="position: relative; max-width: 800px; margin: 50px auto; background: white; border-radius: 8px; max-height: 90vh; overflow-y: auto;">';
 		echo '<button onclick="closeW9Modal()" style="position: absolute; top: 10px; right: 15px; background: none; border: none; font-size: 24px; cursor: pointer; z-index: 10001;">&times;</button>';
 		echo '<div style="padding: 20px;">';
-		echo $form_html;
+		echo wp_kses_post( $form_html);
 		echo '</div>';
 		echo '</div>';
 		echo '</div>';

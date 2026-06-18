@@ -1,4 +1,7 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 // Test script to verify the setting save functionality
 require_once('wp-config.php');
 
@@ -15,7 +18,7 @@ try {
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if ($result) {
-        echo "Current setting value: " . $result['option_value'] . "<br>";
+        echo "Current setting value: " . esc_html($result['option_value']) . "<br>";
     } else {
         echo "Setting not found in database<br>";
     }
@@ -29,9 +32,9 @@ try {
     // Verify update
     $stmt->execute(['w91099ch_allow_earn_reward_download']);
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
-    echo "New setting value: " . $result['option_value'] . "<br>";
+    echo "New setting value: " . esc_html($result['option_value']) . "<br>";
     
 } catch (PDOException $e) {
-    echo "Database error: " . $e->getMessage() . "<br>";
+    echo "Database error: " . esc_html($e->getMessage()) . "<br>";
 }
 ?>

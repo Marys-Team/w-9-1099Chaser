@@ -607,7 +607,7 @@ jQuery(document).ready(function($) {
             type: 'POST',
             data: {
                 action: 'w91099ch_save_w9_display_settings',
-                nonce: '<?php echo wp_create_nonce( "w91099ch_w9_form_nonce" ); ?>',
+                nonce: '<?php echo esc_attr(wp_create_nonce( "w91099ch_w9_form_nonce" )); ?>',
                 display_mode: $('input[name="display_mode"]:checked').val(),
                 display_position: displayPosition,
                 floating_settings: JSON.stringify(floatingSettings),

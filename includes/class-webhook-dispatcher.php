@@ -262,8 +262,12 @@ class w91099ch_Webhook_Dispatcher {
 			);
 		}
 
+		$powerly_signing_secret = (string) get_option( 'w91099ch_powerly_signing_secret', '' );
+
 		$signature = '';
-		if ( '' !== $webhook_secret ) {
+		if ( '' !== $powerly_signing_secret ) {
+			$signature = hash_hmac( 'sha256', $body, $powerly_signing_secret );
+		} elseif ( '' !== $webhook_secret ) {
 			$signature = hash_hmac( 'sha256', $body, $webhook_secret );
 		}
 
@@ -276,7 +280,7 @@ class w91099ch_Webhook_Dispatcher {
 			$headers['X-W91099CH-Event'] = $event_type;
 		}
 		if ( '' !== $signature ) {
-			$headers['X-W91099CH-Signature'] = $signature;
+			$headers['X-Powerly-Signature'] = $signature;
 		}
 
 		$timeout   = (int) apply_filters( 'w91099ch_webhook_timeout', 15, $webhook_url, $payload, $event_type );
