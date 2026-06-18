@@ -1,11 +1,5 @@
 name: Deploy to WordPress.org
 
-# ─────────────────────────────────────────────────────
-# Ye workflow SIRF tab chalta hai jab koi version tag push ho
-# (jaise v1.0.11). Normal commit ya PR merge par ye NAHI chalta.
-# Manual run ke liye "workflow_dispatch" bhi diya hai (GitHub Actions
-# tab par "Run workflow" button se chala sakte hain agar zaroorat ho).
-# ─────────────────────────────────────────────────────
 on:
   push:
     tags:
@@ -25,13 +19,11 @@ jobs:
       contents: write
 
     steps:
-      # STEP 1 — Repo ka code checkout karo
       - name: Checkout code
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # STEP 2 — Version number nikalo (tag se ya manual input se)
       - name: Get version number
         id: version
         env:
@@ -46,10 +38,6 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Deploying version: $VERSION"
 
-      # STEP 3 — Plugin files ko 2 files mein consistency check karo
-      # (Ye safety check hai: agar PHP file aur readme.txt ka version
-      # alag ho, to deploy yahin rok do — galti se purana/galat version
-      # WordPress.org par nahi jana chahiye)
       - name: Verify version consistency
         run: |
           PHP_VERSION=$(grep -m1 "Version:" w9-1099-chaser.php | sed -E 's/.*Version:\s*//' | tr -d '\r')
@@ -62,10 +50,6 @@ jobs:
           fi
           echo "Versions match: $PHP_VERSION"
 
-      # STEP 4 — Plugin ka clean ZIP build folder banao
-      # NOTE: build folder ka naam "build-wp" hai — aage ke step mein
-      # bhi yehi naam use hoga (purani file mein "build" aur "build-wp"
-      # mismatch tha, yahan fix kar diya hai)
       - name: Create ZIP
         run: |
           mkdir -p build-wp
@@ -73,55 +57,50 @@ jobs:
             --exclude='.git' \
             --exclude='.github' \
             --exclude='build-wp' \
+            --exclude='build' \
             --exclude='*.zip' \
             --exclude='node_modules' \
             ./ build-wp/
           cd build-wp
           zip -r ../w9-1099-chaser-${{ steps.version.outputs.version }}.zip .
 
-      # STEP 5 — GitHub par Release page banao (ZIP attach hoga)
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: "v${{ steps.version.outputs.version }}"
+          body: |
+            ## Release v${{ steps.version.outputs.version }}
+            - WordPress.org build
+            - https://wordpress.org/plugins/w9-1099-chaser/
           files: w9-1099-chaser-${{ steps.version.outputs.version }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # STEP 6 — WordPress.org SVN par deploy karo
-      # NOTE: yahan "build-wp/" se sync ho raha hai — pehle "build/" likha
-      # hua tha jo galat tha kyunke upar wala folder "build-wp" banaya gaya tha.
-      - name: Deploy to WordPress.org via SVN
+      - name: Prepare build directory
         run: |
-          SVN_URL="https://plugins.svn.wordpress.org/w9-1099-chaser"
-          SVN_DIR="/tmp/svn-w9-1099-chaser"
+          mkdir -p build
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='build' \
+            --exclude='build-wp' \
+            --exclude='*.zip' \
+            --exclude='node_modules' \
+            ./ build/
 
-          svn checkout --depth immediates "$SVN_URL" "$SVN_DIR" \
-            --username "${{ secrets.WPORG_USERNAME }}" \
-            --password "${{ secrets.WPORG_PASSWORD }}" \
-            --non-interactive --no-auth-cache
+      - name: Deploy to WordPress.org
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        env:
+          SVN_USERNAME: ${{ secrets.WPORG_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.WPORG_PASSWORD }}
+          SLUG: w9-1099-chaser
+          BUILD_DIR: ./build
+          VERSION: ${{ steps.version.outputs.version }}
+          GENERATE_ZIP: false
 
-          svn update --set-depth infinity "$SVN_DIR/trunk" \
-            --username "${{ secrets.WPORG_USERNAME }}" \
-            --password "${{ secrets.WPORG_PASSWORD }}" \
-            --non-interactive --no-auth-cache
-
-          rsync -av --delete \
-            --exclude='.svn' \
-            build-wp/ "$SVN_DIR/trunk/"
-
-          cd "$SVN_DIR"
-          svn add --force trunk
-          svn status | grep '^!' | awk '{print $2}' | xargs -r svn delete
-
-          svn commit -m "Deploy version ${{ steps.version.outputs.version }}" \
-            --username "${{ secrets.WPORG_USERNAME }}" \
-            --password "${{ secrets.WPORG_PASSWORD }}" \
-            --non-interactive --no-auth-cache
-
-      # STEP 7 — Confirm message
-      - name: Deployment complete
+      - name: Deployment success
         run: |
           echo "Version ${{ steps.version.outputs.version }} deployed to WordPress.org"
           echo "GitHub Release v${{ steps.version.outputs.version }} created"
+          echo "View at: https://wordpress.org/plugins/w9-1099-chaser/"
