@@ -11,6 +11,7 @@ $connection_success      = get_transient( 'w91099ch_connection_success' );
 $newsletter_subscribed   = (bool) get_option( 'w91099ch_newsletter_subscribed', false );
 $w9_default_page_id      = absint( get_option( 'w91099ch_w9_default_page_id', 0 ) );
 $w9_default_page_url     = $w9_default_page_id ? (string) get_permalink( $w9_default_page_id ) : '';
+
 ?>
 
 <div class="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 mp-shell">
@@ -591,26 +592,6 @@ $w9_default_page_url     = $w9_default_page_id ? (string) get_permalink( $w9_def
 	</div>
 
 	<?php if ( ! $is_connected || empty( $credentials ) ) : ?>
-		<!-- Connection Required Alert -->
-		<div class="mp-card mb-8 border-l-4 border-amber-500">
-			<div class="p-6">
-				<div class="flex items-start gap-4">
-					<div class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
-						<i class="fas fa-lock text-2xl text-amber-600"></i>
-					</div>
-					<div class="flex-1">
-						<h3 class="text-xl font-bold text-gray-800 mb-2">Connection Required</h3>
-						<p class="text-gray-700 mb-4">Please connect to MyPowerly first to enable these advanced features. All buttons and options will be disabled until you connect.</p>
-						<div class="flex flex-wrap gap-4">
-							<button type="button" class="mp-btn-primary" onclick="(function(){var t=document.getElementById('mypowerly-connect-block')||document.getElementById('connect-mypowerly-cta');if(t){t.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(function(){var b=document.getElementById('connect-mypowerly-cta');if(b){b.classList.add('mp-connect-highlight');setTimeout(function(){b.classList.remove('mp-connect-highlight');},2000);}},600);}})();">
-								<i class="fas fa-plug mr-2"></i>Go to Dashboard and Connect
-							</button>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-
 		<div class="mp-card p-6 mb-10" id="mypowerly-connect-block" style="border-left: 4px solid var(--mp-primary);">
 			<div class="flex flex-col lg:flex-row items-start lg:items-center gap-6">
 				<div class="flex-1">
@@ -674,8 +655,8 @@ jQuery(document).ready(function($) {
 	// Govt download handled by assets/js/w9-1099-chaser-w9-form.js (PDFLib browser-side fill)
 	if (typeof window.w91099chConnectorW9 === 'undefined') {
 		window.w91099chConnectorW9 = {
-			ajaxurl: '<?php echo admin_url( 'admin-ajax.php' ); ?>',
-			nonce: '<?php echo wp_create_nonce( 'w91099ch_w9_form_nonce' ); ?>',
+			ajaxurl: '<?php echo esc_url(admin_url( 'admin-ajax.php' )); ?>',
+			nonce: '<?php echo esc_attr(wp_create_nonce( 'w91099ch_w9_form_nonce' )); ?>',
 			enableSocialSharing: <?php echo wp_json_encode( get_option( 'w91099ch_enable_social_sharing', false ) ); ?>,
 			enableSecureW9: <?php echo wp_json_encode( get_option( 'w91099ch_enable_secure_w9', false ) ); ?>,
 		};
@@ -842,6 +823,16 @@ jQuery(document).ready(function($) {
 		}
 	});
 });
+
+/* Scroll to connection block when navigated from another page with hash */
+if (window.location.hash === '#mypowerly-connect-block') {
+    var $block = $('#mypowerly-connect-block');
+    if ($block.length) {
+        setTimeout(function () {
+            $('html, body').animate({ scrollTop: $block.offset().top - 40 }, 600);
+        }, 500);
+    }
+}
 </script>
 
  </div>

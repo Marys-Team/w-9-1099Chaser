@@ -57,7 +57,8 @@ try {
 		'includes/class-mypowerly-widget-block.php',
 		'includes/class-elementor-integration.php',
 		'includes/class-aliases.php',
-		'includes/class-update-checker.php'
+		'includes/class-update-checker.php',
+		'includes/class-sync-modules-shortcode.php'
 	];
 	
 	foreach ($required_files as $file) {
@@ -144,6 +145,10 @@ class w91099ch_Plugin {
 			$this->w9_form_block  = new w91099ch_W9_Form_Block();
 			$this->mypowerly_widget_block = new w91099ch_MyPowerly_Widget_Block();
 			$this->widget_manager = new w91099ch_Widget_Manager();
+			if ( class_exists( 'w91099ch_Sync_Modules_Shortcode' ) ) {
+				$sync_modules = new w91099ch_Sync_Modules_Shortcode();
+				$sync_modules->init();
+			}
 			if ( class_exists( 'w91099ch_My_Powerly_Card_Rest_Controller' ) ) {
 				$this->my_powerly_card_rest = new w91099ch_My_Powerly_Card_Rest_Controller( $this->core );
 			}
@@ -176,6 +181,11 @@ class w91099ch_Plugin {
 			if ( ! isset( $this->core ) || ! $this->core->has_admin_consent() ) {
 				set_transient( 'w91099ch_connection_error', 'Consent required. Please accept the data handling notice before connecting.', 300 );
 				return;
+			}
+
+			$signing_secret = filter_input( INPUT_GET, 'X-Powerly-Signature', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
+			if ( is_string( $signing_secret ) && '' !== $signing_secret ) {
+				update_option( 'w91099ch_powerly_signing_secret', $signing_secret );
 			}
 
 			try {

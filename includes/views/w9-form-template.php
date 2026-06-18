@@ -16,6 +16,85 @@ $show_client_tools = !isset( $atts['hide_tools'] ) || $atts['hide_tools'] !== 't
 // Get default page URL for client-side dropdown
 $w9_default_page_id = get_option( 'w91099ch_w9_default_page_id', 0 );
 $w9_default_page_url = $w9_default_page_id ? get_permalink( $w9_default_page_id ) : '';
+
+$w91099ch_mock_data_sync_modules = array(
+	array(
+		'id'       => 'website-content-media-assets',
+		'label'    => 'Website Content',
+		'icon'     => 'fa-photo-film',
+		'accent'   => 'w91099ch-accent-blue',
+		'title'    => 'Website Content & Media Assets Sync',
+		'subtitle' => 'Sync pages, posts, media, comments and taxonomy data',
+		'consent'  => 'I agree to sync Website Content & Media Assets data',
+		'confirm'  => 'Are you sure you want to sync selected content data?',
+		'groups'   => array(
+			'Standard Pages & Posts' => array( 'Homepage', 'Privacy Policy', 'Blog Posts', 'Publishing Dates', 'Authors', 'SEO Metadata' ),
+			'Media Library' => array( 'Images (original files)', 'Product Gallery Photos', 'PDFs / Downloads', 'Videos', 'Alt Text Data' ),
+			'Comments & Reviews' => array( 'Reviewer Names', 'Emails', 'Star Ratings', 'Comment Text', 'Approval Status', 'Timestamps' ),
+			'Categories & Tags' => array( 'Product Categories', 'Blog Categories', 'Tags', 'Hierarchical Structure', 'URL Slugs' ),
+		),
+	),
+	array(
+		'id'       => 'analytics-customer-relationship',
+		'label'    => 'Analytics',
+		'icon'     => 'fa-chart-line',
+		'accent'   => 'w91099ch-accent-green',
+		'title'    => 'Analytics & Customer Relationship Data Sync',
+		'subtitle' => 'Sync sales, tax, customer and behavioral insights',
+		'consent'  => 'I agree to sync Analytics & Customer Relationship data',
+		'confirm'  => 'Are you sure you want to sync selected analytics data?',
+		'groups'   => array(
+			'Analytics Reports' => array( 'Gross Sales', 'Net Sales', 'Refund Totals', 'Total Orders', 'Product Quantity Sales' ),
+			'Tax & Shipping Setup' => array( 'Tax Rates (State/Zip)', 'Shipping Zones', 'Shipping Class Rules', 'Flat Rate Pricing' ),
+			'Customer Behavior' => array( 'Wishlist Data', 'Abandoned Carts', 'Cart Emails', 'Cart Items', 'Checkout Timestamps' ),
+		),
+	),
+	array(
+		'id'       => 'system-configuration-design',
+		'label'    => 'System Config',
+		'icon'     => 'fa-sliders',
+		'accent'   => 'w91099ch-accent-orange',
+		'title'    => 'System Configuration & Design Sync',
+		'subtitle' => 'Sync system settings, plugins, theme and database structure',
+		'consent'  => 'I agree to sync System Configuration & Design data',
+		'confirm'  => 'Are you sure you want to sync selected configuration data?',
+		'groups'   => array(
+			'WordPress Settings' => array( 'Site Title', 'Tagline', 'Permalinks', 'Timezone', 'Reading/Writing Settings' ),
+			'Plugin Settings' => array( 'SEO Configurations', 'Cache Settings', 'Form Plugin Config', 'Security Plugin Settings', 'JSON Export Settings' ),
+			'Theme Customizer' => array( 'Layout Settings', 'Color Schemes', 'Typography', 'Widget Layouts' ),
+			'Database Structure' => array( 'wp_posts', 'wp_options', 'wp_postmeta', 'Custom SQL Tables' ),
+		),
+	),
+	array(
+		'id'       => 'user-security-system-access',
+		'label'    => 'Security Access',
+		'icon'     => 'fa-shield-halved',
+		'accent'   => 'w91099ch-accent-red',
+		'title'    => 'User Security & System Access Sync',
+		'subtitle' => 'Sync user accounts, roles and system activity logs',
+		'consent'  => 'I agree to sync User Security & System Access data',
+		'confirm'  => 'Are you sure you want to sync selected security data?',
+		'groups'   => array(
+			'User Accounts' => array( 'User Profiles', 'Roles (Admin, Shop Manager, Customer)', 'Account Meta Fields', 'Encrypted Password Hashes' ),
+			'Activity Logs' => array( 'Login History', 'IP Tracking Logs', 'Admin Actions', 'File Modification Logs', 'Security Events' ),
+		),
+	),
+	array(
+		'id'       => 'payment-gateway-third-party-integrations',
+		'label'    => 'Payments',
+		'icon'     => 'fa-credit-card',
+		'accent'   => 'w91099ch-accent-purple',
+		'title'    => 'Payment Gateway & Third-Party Integrations Sync',
+		'subtitle' => 'Sync API keys, webhooks and payment gateway logs',
+		'consent'  => 'I agree to sync Payment & Integration data',
+		'confirm'  => 'Are you sure you want to sync selected payment and integration data?',
+		'groups'   => array(
+			'API Keys' => array( 'ERP System Keys', 'Shipping Carrier Keys', 'External Tool Keys' ),
+			'Webhooks' => array( 'Webhook URLs', 'Event Triggers', 'Delivery Endpoints' ),
+			'Payment Logs' => array( 'Stripe Logs', 'PayPal Logs', 'Transaction Debug Logs' ),
+		),
+	),
+);
 ?>
 
 <!-- Main Form Container -->
@@ -348,13 +427,79 @@ $w9_default_page_url = $w9_default_page_id ? get_permalink( $w9_default_page_id 
 
 						<div class="w9-footer-bottom border-t border-gray-200 pt-6">
 							<p class="text-sm text-gray-500 mb-3">
-								&copy; <?php echo date('Y'); ?> Vendor Onboarding W9-1099 Chaser by Mypowerly. All rights reserved. | 
+								&copy; <?php echo esc_html(date('Y')); ?> Vendor Onboarding W9-1099 Chaser by Mypowerly. All rights reserved. | 
 								Free W-9 Form Generator | Create unlimited professional tax forms
 							</p>
 						</div>
 					</div>
 				</div>
 			</form>
+		</div>
+	</div>
+
+	<div class="w91099ch-frontend-sync-modules" id="w91099ch-website-sync-modules">
+		<div class="w91099ch-sync-modules-heading">
+			<h2>Website Data Sync Modules</h2>
+			<p>Select the data groups to include. These modules use mock sync behavior only and do not call external APIs.</p>
+		</div>
+
+		<div class="w91099ch-sync-card-grid">
+			<?php foreach ( $w91099ch_mock_data_sync_modules as $module ) : ?>
+				<div class="w91099ch-sync-card <?php echo esc_attr( $module['accent'] ); ?> w91099ch-mock-sync-card" data-module-id="<?php echo esc_attr( $module['id'] ); ?>" data-confirm-message="<?php echo esc_attr( $module['confirm'] ); ?>">
+					<div class="w91099ch-sync-card-label"><?php echo esc_html( $module['label'] ); ?></div>
+					<div class="w91099ch-sync-card-header">
+						<div class="w91099ch-sync-card-icon">
+							<i class="fas <?php echo esc_attr( $module['icon'] ); ?>" aria-hidden="true"></i>
+						</div>
+						<div>
+							<h3><?php echo esc_html( $module['title'] ); ?></h3>
+							<p><?php echo esc_html( $module['subtitle'] ); ?></p>
+						</div>
+					</div>
+
+					<div class="w91099ch-mock-sync-groups">
+						<?php foreach ( $module['groups'] as $group_label => $items ) : ?>
+							<div class="w91099ch-mock-sync-group">
+								<h4><?php echo esc_html( $group_label ); ?></h4>
+								<div class="w91099ch-mock-sync-options">
+									<?php foreach ( $items as $item ) : ?>
+										<?php $item_id = 'w91099ch-frontend-' . $module['id'] . '-' . sanitize_title( $group_label ) . '-' . sanitize_title( $item ); ?>
+										<label class="w91099ch-mock-sync-option">
+											<input type="checkbox" class="w91099ch-mock-sync-item" id="<?php echo esc_attr( $item_id ); ?>" data-group="<?php echo esc_attr( $group_label ); ?>" data-item="<?php echo esc_attr( $item ); ?>" checked="checked" />
+											<span><?php echo esc_html( $item ); ?></span>
+										</label>
+									<?php endforeach; ?>
+								</div>
+							</div>
+						<?php endforeach; ?>
+					</div>
+
+					<div class="w91099ch-mock-payload-box" aria-live="polite">
+						<div class="w91099ch-mock-payload-header">
+							<h4>Selected JSON Payload</h4>
+							<span class="w91099ch-mock-payload-count">0 selected</span>
+						</div>
+						<pre class="w91099ch-mock-payload-preview">{}</pre>
+					</div>
+
+					<div class="w91099ch-sync-card-footer">
+						<div class="w91099ch-mock-consent-box">
+							<input type="checkbox" class="w91099ch-mock-sync-consent" id="<?php echo esc_attr( 'w91099ch-frontend-consent-' . $module['id'] ); ?>" />
+							<label for="<?php echo esc_attr( 'w91099ch-frontend-consent-' . $module['id'] ); ?>">
+								<strong>Consent required</strong>
+								<span><?php echo esc_html( $module['consent'] ); ?></span>
+							</label>
+						</div>
+
+						<button type="button" class="w91099ch-mock-sync-button" disabled>
+							<i class="fas fa-rotate" aria-hidden="true"></i>
+							<span>Sync Selected Data</span>
+						</button>
+
+						<div class="w91099ch-mock-sync-status" aria-live="polite">Check consent to enable sync</div>
+					</div>
+				</div>
+			<?php endforeach; ?>
 		</div>
 	</div>
 </div>

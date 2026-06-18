@@ -238,30 +238,61 @@ class w91099ch_Accounting_Bookkeeping_Plugin_Detector {
 			// ERP detected via functions/classes
 		}
 
-		$invoice_exists = $wpdb->get_var( "SHOW TABLES LIKE '$invoice_table'" );
-		$transaction_exists = $wpdb->get_var( "SHOW TABLES LIKE '$transaction_table'" );
-		$people_exists = $wpdb->get_var( "SHOW TABLES LIKE '$people_table'" );
+		$invoice_cache_key = 'w91099ch_erp_invoice_exists';
+		$transaction_cache_key = 'w91099ch_erp_transaction_exists';
+		$people_cache_key = 'w91099ch_erp_people_exists';
+		$invoice_exists = wp_cache_get( $invoice_cache_key );
+		if ( false === $invoice_exists ) {
+			$invoice_exists = $wpdb->get_var( "SHOW TABLES LIKE '" . esc_sql( $invoice_table ) . "'" );
+			wp_cache_set( $invoice_cache_key, $invoice_exists, '', 300 );
+		}
+		$transaction_exists = wp_cache_get( $transaction_cache_key );
+		if ( false === $transaction_exists ) {
+			$transaction_exists = $wpdb->get_var( "SHOW TABLES LIKE '" . esc_sql( $transaction_table ) . "'" );
+			wp_cache_set( $transaction_cache_key, $transaction_exists, '', 300 );
+		}
+		$people_exists = wp_cache_get( $people_cache_key );
+		if ( false === $people_exists ) {
+			$people_exists = $wpdb->get_var( "SHOW TABLES LIKE '" . esc_sql( $people_table ) . "'" );
+			wp_cache_set( $people_cache_key, $people_exists, '', 300 );
+		}
 
 		if ( $invoice_exists ) {
-			// First, let's see what's actually in the table
-			$total_invoices = $wpdb->get_var("SELECT COUNT(*) FROM $invoice_table");
-			
-			if ($total_invoices > 0) {
-				// Get table structure to understand columns
-				$columns = $wpdb->get_col("SHOW COLUMNS FROM $invoice_table");
-				
-				// Get a sample row to see the data structure
-				$sample = $wpdb->get_row("SELECT * FROM $invoice_table LIMIT 1");
+			$total_cache_key = 'w91099ch_erp_total_invoices';
+			$total_invoices = wp_cache_get( $total_cache_key );
+			if ( false === $total_invoices ) {
+				$total_invoices = $wpdb->get_var( "SELECT COUNT(*) FROM `" . esc_sql( $invoice_table ) . "`" );
+				wp_cache_set( $total_cache_key, $total_invoices, '', 300 );
 			}
 			
-			$invoices = $wpdb->get_results( $wpdb->prepare(
-				"SELECT i.id, i.customer_id, i.user_id, i.total, i.due_date, i.status, i.created_at, p.first_name, p.last_name, p.email, u.display_name, u.user_email 
-				FROM $invoice_table i 
-				LEFT JOIN $people_table p ON i.customer_id = p.id 
-				LEFT JOIN $wpdb->users u ON i.user_id = u.ID 
-				ORDER BY i.created_at DESC LIMIT %d",
-				$limit
-			) );
+			if ($total_invoices > 0) {
+				$columns_cache = 'w91099ch_erp_invoice_columns';
+				$columns = wp_cache_get( $columns_cache );
+				if ( false === $columns ) {
+					$columns = $wpdb->get_col( "SHOW COLUMNS FROM `" . esc_sql( $invoice_table ) . "`" );
+					wp_cache_set( $columns_cache, $columns, '', 300 );
+				}
+				$sample_cache = 'w91099ch_erp_invoice_sample';
+				$sample = wp_cache_get( $sample_cache );
+				if ( false === $sample ) {
+					$sample = $wpdb->get_row( "SELECT * FROM `" . esc_sql( $invoice_table ) . "` LIMIT 1" );
+					wp_cache_set( $sample_cache, $sample, '', 300 );
+				}
+			}
+			
+			$invoices_cache_key = 'w91099ch_erp_invoices_' . $limit;
+			$invoices = wp_cache_get( $invoices_cache_key );
+			if ( false === $invoices ) {
+				$invoices = $wpdb->get_results( $wpdb->prepare(
+					"SELECT i.id, i.customer_id, i.user_id, i.total, i.due_date, i.status, i.created_at, p.first_name, p.last_name, p.email, u.display_name, u.user_email 
+					FROM `$invoice_table` i 
+					LEFT JOIN `$people_table` p ON i.customer_id = p.id 
+					LEFT JOIN `$wpdb->users` u ON i.user_id = u.ID 
+					ORDER BY i.created_at DESC LIMIT %d",
+					$limit
+				) );
+				wp_cache_set( $invoices_cache_key, $invoices, '', 300 );
+			}
 
 			foreach ( $invoices as $invoice ) {
 				$customer_name = 'N/A';
@@ -304,13 +335,18 @@ class w91099ch_Accounting_Bookkeeping_Plugin_Detector {
 		}
 
 		if ( $transaction_exists ) {
-			$transactions = $wpdb->get_results( $wpdb->prepare(
-				"SELECT t.id, t.user_id, t.debit, t.credit, t.created_at, t.particulars, u.display_name, u.user_email 
-				FROM $transaction_table t 
-				LEFT JOIN $wpdb->users u ON t.user_id = u.ID 
-				ORDER BY t.created_at DESC LIMIT %d",
-				$limit
-			) );
+			$transactions_cache_key = 'w91099ch_erp_transactions_' . $limit;
+			$transactions = wp_cache_get( $transactions_cache_key );
+			if ( false === $transactions ) {
+				$transactions = $wpdb->get_results( $wpdb->prepare(
+					"SELECT t.id, t.user_id, t.debit, t.credit, t.created_at, t.particulars, u.display_name, u.user_email 
+					FROM `$transaction_table` t 
+					LEFT JOIN `$wpdb->users` u ON t.user_id = u.ID 
+					ORDER BY t.created_at DESC LIMIT %d",
+					$limit
+				) );
+				wp_cache_set( $transactions_cache_key, $transactions, '', 300 );
+			}
 
 			foreach ( $transactions as $transaction ) {
 				$user_name = 'N/A';
@@ -373,7 +409,15 @@ class w91099ch_Accounting_Bookkeeping_Plugin_Detector {
 		if ( empty( $rows ) ) {
 			// Try to get data from people table if it exists
 			if ($people_exists) {
-				$people_data = $wpdb->get_results("SELECT * FROM $people_table LIMIT $limit");
+				$people_cache_key = 'w91099ch_erp_people_' . $limit;
+				$people_data = wp_cache_get( $people_cache_key );
+				if ( false === $people_data ) {
+					$people_data = $wpdb->get_results( $wpdb->prepare(
+						"SELECT * FROM `$people_table` LIMIT %d",
+						$limit
+					) );
+					wp_cache_set( $people_cache_key, $people_data, '', 300 );
+				}
 				
 				if (!empty($people_data)) {
 					foreach ($people_data as $person) {
@@ -408,10 +452,22 @@ class w91099ch_Accounting_Bookkeeping_Plugin_Detector {
 				} else {
 					$total_records = 0;
 					if ($invoice_exists) {
-						$total_records += $wpdb->get_var("SELECT COUNT(*) FROM $invoice_table");
+						$inv_count_cache = 'w91099ch_erp_inv_count';
+						$inv_count = wp_cache_get( $inv_count_cache );
+						if ( false === $inv_count ) {
+							$inv_count = $wpdb->get_var( "SELECT COUNT(*) FROM `" . esc_sql( $invoice_table ) . "`" );
+							wp_cache_set( $inv_count_cache, $inv_count, '', 300 );
+						}
+						$total_records += $inv_count;
 					}
 					if ($transaction_exists) {
-						$total_records += $wpdb->get_var("SELECT COUNT(*) FROM $transaction_table");
+						$trn_count_cache = 'w91099ch_erp_trn_count';
+						$trn_count = wp_cache_get( $trn_count_cache );
+						if ( false === $trn_count ) {
+							$trn_count = $wpdb->get_var( "SELECT COUNT(*) FROM `" . esc_sql( $transaction_table ) . "`" );
+							wp_cache_set( $trn_count_cache, $trn_count, '', 300 );
+						}
+						$total_records += $trn_count;
 					}
 					
 					if ($total_records == 0) {
@@ -443,11 +499,22 @@ class w91099ch_Accounting_Bookkeeping_Plugin_Detector {
 
 		// Check for Sliced Invoices
 		$invoice_table = $wpdb->prefix . 'sliced_invoices';
-		if ( $wpdb->get_var( "SHOW TABLES LIKE '$invoice_table'" ) ) {
-			$invoices = $wpdb->get_results( $wpdb->prepare(
-				"SELECT id, client_id, number, total, status, created FROM $invoice_table ORDER BY created DESC LIMIT %d",
-				$limit
-			) );
+		$si_table_cache = 'w91099ch_si_table_exists';
+		$si_table_exists = wp_cache_get( $si_table_cache );
+		if ( false === $si_table_exists ) {
+			$si_table_exists = $wpdb->get_var( "SHOW TABLES LIKE '" . esc_sql( $invoice_table ) . "'" );
+			wp_cache_set( $si_table_cache, $si_table_exists, '', 300 );
+		}
+		if ( $si_table_exists ) {
+			$si_inv_cache = 'w91099ch_si_invoices_' . $limit;
+			$invoices = wp_cache_get( $si_inv_cache );
+			if ( false === $invoices ) {
+				$invoices = $wpdb->get_results( $wpdb->prepare(
+					"SELECT id, client_id, number, total, status, created FROM `$invoice_table` ORDER BY created DESC LIMIT %d",
+					$limit
+				) );
+				wp_cache_set( $si_inv_cache, $invoices, '', 300 );
+			}
 
 			foreach ( $invoices as $invoice ) {
 				$client = get_userdata( $invoice->client_id );
@@ -477,11 +544,22 @@ class w91099ch_Accounting_Bookkeeping_Plugin_Detector {
 
 		// Check for Sprout Invoices
 		$invoice_table = $wpdb->prefix . 'sprout_invoices';
-		if ( $wpdb->get_var( "SHOW TABLES LIKE '$invoice_table'" ) ) {
-			$invoices = $wpdb->get_results( $wpdb->prepare(
-				"SELECT id, user_id, total, status, post_date FROM $invoice_table ORDER BY post_date DESC LIMIT %d",
-				$limit
-			) );
+		$sp_table_cache = 'w91099ch_sp_table_exists';
+		$sp_table_exists = wp_cache_get( $sp_table_cache );
+		if ( false === $sp_table_exists ) {
+			$sp_table_exists = $wpdb->get_var( "SHOW TABLES LIKE '" . esc_sql( $invoice_table ) . "'" );
+			wp_cache_set( $sp_table_cache, $sp_table_exists, '', 300 );
+		}
+		if ( $sp_table_exists ) {
+			$sp_inv_cache = 'w91099ch_sp_invoices_' . $limit;
+			$invoices = wp_cache_get( $sp_inv_cache );
+			if ( false === $invoices ) {
+				$invoices = $wpdb->get_results( $wpdb->prepare(
+					"SELECT id, user_id, total, status, post_date FROM `$invoice_table` ORDER BY post_date DESC LIMIT %d",
+					$limit
+				) );
+				wp_cache_set( $sp_inv_cache, $invoices, '', 300 );
+			}
 
 			foreach ( $invoices as $invoice ) {
 				$user = get_userdata( $invoice->user_id );

@@ -188,7 +188,7 @@ class w91099ch_Admin {
 		// Get the real government PDF template
 		$pdf_template = w91099ch_PLUGIN_PATH . 'assets/pdf/w9-govt-form.pdf';
 		if ( ! file_exists( $pdf_template ) ) {
-			throw new Exception( 'Government W-9 PDF template not found: ' . $pdf_template );
+			throw new Exception( 'Government W-9 PDF template not found: ' . esc_html( $pdf_template ));
 		}
 		
 		// Create temporary directory in WordPress uploads
@@ -234,7 +234,7 @@ class w91099ch_Admin {
 		
 		// Check if output file was created
 		if ( ! file_exists( $output_pdf ) ) {
-			throw new Exception( 'pdftk failed to create output file. Attempts: ' . implode( ' | ', $attempt_logs ) );
+			throw new Exception( 'pdftk failed to create output file. Attempts: ' . implode( ' | ', esc_html( $attempt_logs ) ));
 		}
 		
 		// Read the filled PDF
@@ -864,8 +864,7 @@ startxref
 		echo '<li>' . esc_html( $step_2 ) . '</li>';
 		echo '<li>' . esc_html( $step_3 ) . '</li>';
 		echo '</ol>';
-		echo '<p><a class="button button-primary" href="' . $new_page_url . '">Create New W-9 Page (Prefilled)</a></p>';
-		echo '</div>';
+		echo '<p><a class="button button-primary" href="' . esc_url( $new_page_url) . '">Create New W-9 Page (Prefilled)</a></p>';		echo '</div>';
 	}
 
 	public function ajax_newsletter_subscribe() {
@@ -1434,7 +1433,7 @@ startxref
 						method: 'POST',
 						data: {
 							action: 'w91099ch_get_default_page_url',
-							nonce: '<?php echo wp_create_nonce( 'w91099ch_nonce' ); ?>'
+							nonce: '<?php echo wp_kses_post( wp_create_nonce( 'w91099ch_nonce' )); ?>'
 						}
 					});
 				}
@@ -1701,62 +1700,56 @@ startxref
 		$admin_email = get_option( 'admin_email' );
 		$wp_version  = get_bloginfo( 'version' );
 
+		$current_user = wp_get_current_user();
+		$user_name    = $current_user->display_name ?: $current_user->user_login;
+		$user_email   = $current_user->user_email;
+
 		$to      = '1099automation@gmail.com';
 		$subject = 'Plugin Deactivation Feedback: W9-1099 Chaser';
 		
-		// Professional HTML Email Format
-		$message = '<html><body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">';
-		$message .= '<div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 8px; background-color: #f9f9f9;">';
-		$message .= '<h2 style="color: #4f46e5; border-bottom: 2px solid #4f46e5; padding-bottom: 10px;">Deactivation Feedback</h2>';
-		$message .= '<p>A user has just deactivated <strong>W9-1099 Chaser</strong> on their website. Here are the details:</p>';
-		
-		$message .= '<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">';
-		$message .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; width: 30%;">Reason:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( str_replace( '_', ' ', ucfirst( $reason ) ) ) . '</td></tr>';
+		$body  = '<html><body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">';
+		$body .= '<div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 8px; background-color: #f9f9f9;">';
+		$body .= '<h2 style="color: #4f46e5; border-bottom: 2px solid #4f46e5; padding-bottom: 10px;">Deactivation Feedback</h2>';
+		$body .= '<p>A user has just deactivated <strong>W9-1099 Chaser</strong> on their website. Here are the details:</p>';
+		$body .= '<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">';
+		$body .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; width: 30%;">User Name:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( $user_name ) . '</td></tr>';
+		$body .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold; width: 30%;">User Email:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( $user_email ) . '</td></tr>';
+		$body .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Reason:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( str_replace( '_', ' ', ucfirst( $reason ) ) ) . '</td></tr>';
 		
 		if ( ! empty( $details ) ) {
 			$label = ( $reason === 'found_better' ) ? 'Alternative Plugin:' : 'Additional Details:';
-			$message .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">' . esc_html( $label ) . '</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( $details ) . '</td></tr>';
+			$body .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">' . esc_html( $label ) . '</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( $details ) . '</td></tr>';
 		}
 		
-		$message .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Site Name:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( $site_name ) . '</td></tr>';
-		$message .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Site URL:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="' . esc_url( $site_url ) . '">' . esc_html( $site_url ) . '</a></td></tr>';
-		$message .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Admin Email:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( $admin_email ) . '</td></tr>';
-		$message .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">WP Version:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( $wp_version ) . '</td></tr>';
-		$message .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Date:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( current_time( 'mysql' ) ) . '</td></tr>';
-		$message .= '</table>';
-		
-		$message .= '<p style="font-size: 12px; color: #777; text-align: center; margin-top: 30px;">This is an automated notification from the W9-1099 Chaser plugin.</p>';
-		$message .= '</div></body></html>';
+		$body .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Site Name:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( $site_name ) . '</td></tr>';
+		$body .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Site URL:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;"><a href="' . esc_url( $site_url ) . '">' . esc_html( $site_url ) . '</a></td></tr>';
+		$body .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Admin Email:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( $admin_email ) . '</td></tr>';
+		$body .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">WP Version:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( $wp_version ) . '</td></tr>';
+		$body .= '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; font-weight: bold;">Date:</td><td style="padding: 8px; border-bottom: 1px solid #ddd;">' . esc_html( current_time( 'mysql' ) ) . '</td></tr>';
+		$body .= '</table>';
+		$body .= '<p style="font-size: 12px; color: #777; text-align: center; margin-top: 30px;">This is an automated notification from the W9-1099 Chaser plugin.</p>';
+		$body .= '</div></body></html>';
 
-		// Send using PHPMailer with mail() transport (bypass SMTP overrides)
-		try {
-			if ( ! class_exists( '\\PHPMailer\\PHPMailer\\PHPMailer' ) ) {
-				require_once ABSPATH . WPINC . '/PHPMailer/PHPMailer.php';
-				require_once ABSPATH . WPINC . '/PHPMailer/SMTP.php';
-				require_once ABSPATH . WPINC . '/PHPMailer/Exception.php';
-			}
+		add_filter( 'wp_mail_from', function() use ( $admin_email ) { return $admin_email; }, 99999 );
+		add_filter( 'wp_mail_from_name', function() { return 'W9-1099 Chaser'; }, 99999 );
+		add_action( 'phpmailer_init', function( $phpmailer ) use ( $admin_email ) {
+			$phpmailer->setFrom( $admin_email, 'W9-1099 Chaser', false );
+		}, 99999 );
 
-			$mailer = new \PHPMailer\PHPMailer\PHPMailer( true );
-			$mailer->isMail();
-			$mailer->CharSet = 'UTF-8';
-			$mailer->Subject = $subject;
-			$mailer->Body = $message;
-			$mailer->AltBody = strip_tags( $message );
-			$mailer->isHTML( true );
-			$mailer->addAddress( $to );
+		$headers = array(
+			'Content-Type: text/html; charset=UTF-8',
+			'Reply-To: ' . $user_name . ' <' . $user_email . '>',
+		);
 
-			if ( $admin_email ) {
-				$mailer->setFrom( $admin_email, 'W9-1099 Chaser', false );
-				$mailer->addReplyTo( $admin_email );
-			}
+		$mailed = wp_mail( $to, $subject, $body, $headers );
 
-			$mailer->send();
-		} catch ( Exception $e ) {
-			error_log( 'w91099ch: Deactivation feedback email failed: ' . $e->getMessage() );
-		} catch ( \PHPMailer\PHPMailer\Exception $e ) {
-			error_log( 'w91099ch: Deactivation feedback email failed: ' . $e->getMessage() );
-		} catch ( \Throwable $e ) {
-			error_log( 'w91099ch: Deactivation feedback email failed: ' . $e->getMessage() );
+		if ( ! $mailed ) {
+			$alt_headers = "MIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\nFrom: W9-1099 Chaser <" . $admin_email . ">\r\nReply-To: " . $user_name . " <" . $user_email . ">\r\n";
+			$mailed = mail( $to, $subject, $body, $alt_headers );
+		}
+
+		if ( ! $mailed ) {
+			error_log( 'w91099ch: Deactivation feedback email failed to ' . $to );
 		}
 
 		wp_send_json_success();
@@ -2194,7 +2187,7 @@ startxref
 									<?php $alarms_disabled_attr = $alarms_disabled ? 'disabled="disabled"' : ''; ?>
 									<input type="hidden" name="w91099ch_payment_limit_enabled_present" value="1" />
 									<label class="flex items-start gap-3 cursor-pointer">
-										<input type="checkbox" name="w91099ch_payment_limit_enabled" value="1" <?php checked( $payment_limit_enabled ); ?> class="mt-1" <?php echo $alarms_disabled_attr; ?> />
+										<input type="checkbox" name="w91099ch_payment_limit_enabled" value="1" <?php checked( $payment_limit_enabled ); ?> class="mt-1" <?php echo wp_kses_post($alarms_disabled_attr); ?> />
 										<div>
 											<div class="font-bold text-gray-800"><?php echo esc_html__( 'Activate payout limits', 'w9-1099-chaser' ); ?></div>
 											<div class="text-sm text-gray-600"><?php echo esc_html__( 'If enabled, outgoing payout/payment you will be alerted against your limit.', 'w9-1099-chaser' ); ?></div>
@@ -2204,7 +2197,7 @@ startxref
 									<div class="grid grid-cols-1 md:grid-cols-1 gap-4">
 										<div>
 											<label for="w91099ch_payment_limit_amount" class="block text-sm font-semibold text-gray-700 mb-2"><?php echo esc_html__( 'Payout Limit amount', 'w9-1099-chaser' ); ?></label>
-											<input id="w91099ch_payment_limit_amount" name="w91099ch_payment_limit_amount" type="text" class="mp-input" value="<?php echo esc_attr( (string) $payment_limit_amount ); ?>" placeholder="<?php echo esc_attr__( 'e.g. 5000', 'w9-1099-chaser' ); ?>" <?php echo $alarms_disabled_attr; ?> />
+											<input id="w91099ch_payment_limit_amount" name="w91099ch_payment_limit_amount" type="text" class="mp-input" value="<?php echo esc_attr( (string) $payment_limit_amount ); ?>" placeholder="<?php echo esc_attr__( 'e.g. 5000', 'w9-1099-chaser' ); ?>" <?php echo wp_kses_post($alarms_disabled_attr); ?> />
 										</div>
 									</div>
 
@@ -2214,21 +2207,21 @@ startxref
 									<input type="hidden" name="w91099ch_sales_tax_nexus_warning_present" value="1" />
 									<div class="space-y-3">
 										<label class="flex items-start gap-3 cursor-pointer">
-											<input type="checkbox" name="w91099ch_sales_tax_nexus_affiliate_enabled" value="1" <?php checked( $sales_tax_nexus_affiliate_enabled ); ?> class="mt-1" <?php echo $alarms_disabled_attr; ?> />
+											<input type="checkbox" name="w91099ch_sales_tax_nexus_affiliate_enabled" value="1" <?php checked( $sales_tax_nexus_affiliate_enabled ); ?> class="mt-1" <?php echo wp_kses_post($alarms_disabled_attr); ?> />
 											<div>
 												<div class="font-bold text-gray-800"><?php echo esc_html__( 'Affiliate Nexus', 'w9-1099-chaser' ); ?></div>
 												<div class="text-sm text-gray-600"><?php echo esc_html__( 'If enabled, you will see an alert when a new affiliate/vendor signs up in certain states that may create sales-tax nexus.', 'w9-1099-chaser' ); ?></div>
 											</div>
 										</label>
 										<label class="flex items-start gap-3 cursor-pointer">
-											<input type="checkbox" name="w91099ch_sales_tax_nexus_click_through_enabled" value="1" <?php checked( $sales_tax_nexus_click_through_enabled ); ?> class="mt-1" <?php echo $alarms_disabled_attr; ?> />
+											<input type="checkbox" name="w91099ch_sales_tax_nexus_click_through_enabled" value="1" <?php checked( $sales_tax_nexus_click_through_enabled ); ?> class="mt-1" <?php echo wp_kses_post($alarms_disabled_attr); ?> />
 											<div>
 												<div class="font-bold text-gray-800"><?php echo esc_html__( 'Click Through Nexus', 'w9-1099-chaser' ); ?></div>
 												<div class="text-sm text-gray-600"><?php echo esc_html__( 'If enabled, you will see an alert when a new affiliate/vendor signs up in certain states that may create sales-tax nexus.', 'w9-1099-chaser' ); ?></div>
 											</div>
 										</label>
 										<label class="flex items-start gap-3 cursor-pointer">
-											<input type="checkbox" name="w91099ch_sales_tax_nexus_agency_enabled" value="1" <?php checked( $sales_tax_nexus_agency_enabled ); ?> class="mt-1" <?php echo $alarms_disabled_attr; ?> />
+											<input type="checkbox" name="w91099ch_sales_tax_nexus_agency_enabled" value="1" <?php checked( $sales_tax_nexus_agency_enabled ); ?> class="mt-1" <?php echo wp_kses_post($alarms_disabled_attr); ?> />
 											<div>
 												<div class="font-bold text-gray-800"><?php echo esc_html__( 'Agency Nexus', 'w9-1099-chaser' ); ?></div>
 												<div class="text-sm text-gray-600"><?php echo esc_html__( 'If enabled, you will see an alert when a new affiliate/vendor signs up in certain states that may create sales-tax nexus.', 'w9-1099-chaser' ); ?></div>
@@ -2602,8 +2595,7 @@ startxref
 									</div>
 								<?php endif; ?>
 							</div>
-
-							<div class="pt-2 flex justify-end">
+							<div class="pt-4 flex justify-end">
 								<input type="hidden" name="settings_action" value="save" />
 								<button type="submit" class="mp-btn-primary">
 									<i class="fas fa-save"></i>
@@ -3328,6 +3320,28 @@ startxref
 						'success'     => esc_html__( 'W-9 form downloaded successfully!', 'w9-1099-chaser' ),
 					),
 				)
+			);
+		}
+
+		// Enqueue sync-modules CSS & JS for admin pages (powers the 5 new module cards)
+		if (
+			strpos( (string) $hook, 'w91099ch' ) !== false ||
+			strpos( (string) $hook, 'w9-1099-chaser' ) !== false
+		) {
+			$sync_css_path = w91099ch_PLUGIN_PATH . 'assets/css/w9-1099-chaser-sync-modules.css';
+			$sync_js_path  = w91099ch_PLUGIN_PATH . 'assets/js/w9-1099-chaser-sync-modules.js';
+			wp_enqueue_style(
+				'w91099ch-sync-modules',
+				w91099ch_PLUGIN_URL . 'assets/css/w9-1099-chaser-sync-modules.css',
+				array(),
+				file_exists( $sync_css_path ) ? filemtime( $sync_css_path ) : w91099ch_VERSION
+			);
+			wp_enqueue_script(
+				'w91099ch-sync-modules',
+				w91099ch_PLUGIN_URL . 'assets/js/w9-1099-chaser-sync-modules.js',
+				array( 'jquery' ),
+				file_exists( $sync_js_path ) ? filemtime( $sync_js_path ) : w91099ch_VERSION,
+				true
 			);
 		}
 

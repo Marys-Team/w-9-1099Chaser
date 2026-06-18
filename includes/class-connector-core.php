@@ -1052,6 +1052,11 @@ class w91099ch_Core {
 			add_action( 'wp_ajax_w91099ch_sync_profile', array( $this, 'ajax_sync_profile' ) );
 			add_action( 'wp_ajax_w91099ch_sync_plugin_data', array( $this, 'ajax_sync_plugin_data' ) );
 			add_action( 'wp_ajax_w91099ch_sync_ecommerce_data', array( $this, 'ajax_sync_ecommerce_data' ) );
+			add_action( 'wp_ajax_w91099ch_sync_website_content', array( $this, 'ajax_sync_website_content' ) );
+			add_action( 'wp_ajax_w91099ch_sync_analytics', array( $this, 'ajax_sync_analytics' ) );
+			add_action( 'wp_ajax_w91099ch_sync_system_config', array( $this, 'ajax_sync_system_config' ) );
+			add_action( 'wp_ajax_w91099ch_sync_security_access', array( $this, 'ajax_sync_security_access' ) );
+			add_action( 'wp_ajax_w91099ch_sync_payments', array( $this, 'ajax_sync_payments' ) );
 			add_action( 'wp_ajax_w91099ch_sync_affiliates', array( $this, 'ajax_sync_affiliates' ) );
 			add_action( 'wp_ajax_w91099ch_save_auto_sync_setting', array( $this, 'ajax_save_auto_sync_setting' ) );
 			add_action( 'wp_ajax_w91099ch_sync_w9_payee', array( $this, 'ajax_sync_w9_payee' ) );
@@ -1664,87 +1669,1721 @@ class w91099ch_Core {
 			}
 
 			$detector = new w91099ch_Ecommerce_Plugin_Detector();
-			$plugins  = $detector->get_ecommerce_plugins_data();
+			$detected_plugins = $detector->get_ecommerce_plugins_data();
 
 			$settings = get_option( 'w91099ch_ecommerce_data_settings', array() );
 			if ( ! is_array( $settings ) ) {
 				$settings = array();
 			}
 
-			$selected = array();
-			foreach ( (array) $plugins as $slug => $plugin_meta ) {
+			$defaults = $this->get_ecommerce_sync_defaults();
+			$total_sent = 0;
+			$total_errors = array();
+			$sheets = array();
+
+			$field_labels = array(
+				'orders'        => 'Orders',
+				'customers'     => 'Customers',
+				'products'      => 'Products',
+				'payments'      => 'Payments',
+				'refunds'       => 'Refunds',
+				'coupons'       => 'Coupons',
+				'subscriptions' => 'Subscriptions',
+				'payouts'       => 'Payouts',
+				'vendors'       => 'Vendors',
+			);
+
+			$all_plugins = array(
+				'woocommerce' => array(
+					'label'  => 'WooCommerce',
+					'fields' => array( 'orders', 'customers', 'products', 'payments', 'refunds', 'coupons', 'subscriptions', 'payouts', 'vendors' ),
+				),
+				'dokan'       => array(
+					'label'  => 'Dokan',
+					'fields' => array( 'vendors', 'orders', 'customers', 'products', 'payouts', 'refunds' ),
+				),
+				'wcfm'        => array(
+					'label'  => 'WCFM',
+					'fields' => array( 'vendors', 'orders', 'customers', 'products', 'payouts', 'refunds' ),
+				),
+				'stripe'      => array(
+					'label'  => 'Stripe',
+					'fields' => array( 'payments', 'refunds', 'payouts' ),
+				),
+				'paypal'      => array(
+					'label'  => 'PayPal',
+					'fields' => array( 'payments', 'refunds', 'payouts' ),
+				),
+			);
+
+			foreach ( $all_plugins as $slug => $def ) {
 				$slug = sanitize_key( (string) $slug );
 				if ( '' === $slug ) {
 					continue;
 				}
 
+				$plugin_meta = isset( $detected_plugins[ $slug ] ) ? $detected_plugins[ $slug ] : array();
+
 				$cfg = isset( $settings[ $slug ] ) && is_array( $settings[ $slug ] ) ? $settings[ $slug ] : array();
-				// Always treat platforms as enabled (Enable checkbox removed from UI)
 				$fields_cfg = ( isset( $cfg['fields'] ) && is_array( $cfg['fields'] ) ) ? $cfg['fields'] : array();
 				$selected_fields = array();
-				foreach ( $fields_cfg as $field_key => $is_on ) {
+				foreach ( $def['fields'] as $field_key ) {
 					$field_key = sanitize_key( (string) $field_key );
 					if ( '' === $field_key ) {
 						continue;
 					}
-					if ( (bool) $is_on ) {
+					if ( isset( $fields_cfg[ $field_key ] ) && (bool) $fields_cfg[ $field_key ] ) {
 						$selected_fields[] = $field_key;
 					}
 				}
 
-				$defaults = $this->get_ecommerce_sync_defaults();
-				$datasets = $this->collect_ecommerce_datasets( $slug, $selected_fields, $defaults );
+				$plugin_label = sanitize_text_field( (string) ( $plugin_meta['name'] ?? $def['label'] ) );
+
+				if ( ! empty( $plugin_meta ) ) {
+					$datasets = $this->collect_ecommerce_datasets( $slug, $selected_fields, $defaults );
+				} else {
+					$datasets = array( 'data' => array(), 'counts' => array(), 'errors' => array() );
+				}
 
 				$plugin_meta = is_array( $plugin_meta ) ? $plugin_meta : array();
-				$selected[] = array(
+				$plugin_data = array(
 					'slug'            => $slug,
-					'name'            => sanitize_text_field( (string) ( $plugin_meta['name'] ?? $slug ) ),
-					'version'          => sanitize_text_field( (string) ( $plugin_meta['version'] ?? '' ) ),
-					'active'           => (bool) ( $plugin_meta['active'] ?? false ),
-					'detected'         => (bool) ( $plugin_meta['detected'] ?? true ),
-					'selected_fields'  => array_values( $selected_fields ),
-					'fields_selected'  => count( $selected_fields ),
-					'data'             => isset( $datasets['data'] ) && is_array( $datasets['data'] ) ? $datasets['data'] : array(),
-					'counts'           => isset( $datasets['counts'] ) && is_array( $datasets['counts'] ) ? $datasets['counts'] : array(),
-					'errors'           => isset( $datasets['errors'] ) && is_array( $datasets['errors'] ) ? $datasets['errors'] : array(),
+					'name'            => $plugin_label,
+					'version'         => sanitize_text_field( (string) ( $plugin_meta['version'] ?? '' ) ),
+					'active'          => (bool) ( $plugin_meta['active'] ?? false ),
+					'detected'        => (bool) ( $plugin_meta['detected'] ?? false ),
+					'selected_fields' => array_values( $selected_fields ),
+					'fields_selected' => count( $selected_fields ),
+					'data'            => isset( $datasets['data'] ) && is_array( $datasets['data'] ) ? $datasets['data'] : array(),
+					'counts'          => isset( $datasets['counts'] ) && is_array( $datasets['counts'] ) ? $datasets['counts'] : array(),
+					'errors'          => isset( $datasets['errors'] ) && is_array( $datasets['errors'] ) ? $datasets['errors'] : array(),
 				);
+
+				$sheet_name = $slug;
+				$plugin_payload = array(
+					'event_type'     => 'ecommerce_synced',
+					'timestamp'      => gmdate( 'c' ),
+					'site_url'       => (string) get_site_url(),
+					'site_name'      => (string) get_bloginfo( 'name' ),
+					'admin_email'    => sanitize_email( (string) get_option( 'admin_email', '' ) ),
+					'sheet_tab'      => $sheet_name,
+					'tab'            => $sheet_name,
+					'sheet'          => $sheet_name,
+					'tab_name'       => $sheet_name,
+					'sheet_name'     => $sheet_name,
+					'worksheet'      => $sheet_name,
+					'target_tab'     => $sheet_name,
+					'card_key'       => 'ecommerce_data',
+					'plugin_slug'    => $slug,
+					'plugin_name'    => $plugin_data['name'],
+					'plugin_version' => $plugin_data['version'],
+					'plugin_active'  => $plugin_data['active'],
+				);
+
+				foreach ( $selected_fields as $field ) {
+					$plugin_payload[ $field ] = isset( $plugin_data['data'][ $field ] ) ? $plugin_data['data'][ $field ] : array();
+				}
+
+				if ( ! empty( $plugin_meta ) ) {
+					$result = w91099ch_Webhook_Dispatcher::dispatch_raw_payload( $plugin_payload, 'ecommerce_synced' );
+					if ( isset( $result['sent'] ) && $result['sent'] > 0 ) {
+						++$total_sent;
+					}
+					if ( isset( $result['errors'] ) && is_array( $result['errors'] ) && ! empty( $result['errors'] ) ) {
+						$total_errors = array_merge( $total_errors, $result['errors'] );
+					}
+				}
+
+				$sheet = array();
+				foreach ( $def['fields'] as $field ) {
+					$label = isset( $field_labels[ $field ] ) ? $field_labels[ $field ] : ucfirst( $field );
+					$enabled = in_array( $field, $selected_fields, true );
+					if ( $enabled && ! empty( $plugin_meta ) ) {
+						$sheet[ $label ] = isset( $plugin_data['data'][ $field ] ) ? $plugin_data['data'][ $field ] : array();
+					} elseif ( $enabled ) {
+						$sheet[ $label ] = array();
+					} else {
+						$sheet[ $label ] = array();
+					}
+				}
+				$sheet['Include in ecommerce sync'] = array_values( $selected_fields );
+				$sheets[ $plugin_label ] = $sheet;
 			}
-
-			$payload = array(
-				'event_type'  => 'ecommerce_synced',
-				'timestamp'   => gmdate( 'c' ),
-				'site_url'    => (string) get_site_url(),
-				'site_name'   => (string) get_bloginfo( 'name' ),
-				'admin_email' => sanitize_email( (string) get_option( 'admin_email', '' ) ),
-				'sheet_tab'   => 'ecommerce',
-				'card_key'    => 'ecommerce_data',
-				'data'        => array_values( $selected ),
-				'summary'     => array(
-					'total_detected'   => count( $plugins ),
-					'total_selected'   => count( $selected ),
-					'settings_enabled' => array_keys( $settings ), // All platforms treated as enabled
-				),
-			);
-
-			$webhook_status = $this->api->send_to_webhook(
-				'ecommerce',
-				array_values( $selected ),
-				array( 'total' => count( $selected ) ),
-				'w91099ch_sync_ecommerce_data',
-				$payload
-			);
 
 			update_option( 'w91099ch_ecommerce_last_sync', time() );
 
 			wp_send_json_success(
 				array(
 					'message'        => esc_html__( 'Ecommerce data synced successfully', 'w9-1099-chaser' ),
-					'webhook_status' => $webhook_status,
+					'sent'           => $total_sent,
+					'total_plugins'  => count( $all_plugins ),
+					'errors'         => $total_errors,
+					'sheets'         => $sheets,
 				)
 			);
 		} catch ( Exception $e ) {
 			wp_send_json_error( $e->getMessage() );
 		}
+	}
+
+	public function get_ecommerce_plugin_sheets() {
+		if ( ! class_exists( 'w91099ch_Ecommerce_Plugin_Detector' ) ) {
+			require_once w91099ch_PLUGIN_PATH . 'includes/ecommerce-plugin-detector-init.php';
+		}
+
+		$detector = new w91099ch_Ecommerce_Plugin_Detector();
+		$detected_plugins = $detector->get_ecommerce_plugins_data();
+
+		$settings = get_option( 'w91099ch_ecommerce_data_settings', array() );
+		if ( ! is_array( $settings ) ) {
+			$settings = array();
+		}
+
+		$defaults = $this->get_ecommerce_sync_defaults();
+		$total_sent = 0;
+		$total_errors = array();
+		$sheets = array();
+
+		$field_labels = array(
+			'orders'        => 'Orders',
+			'customers'     => 'Customers',
+			'products'      => 'Products',
+			'payments'      => 'Payments',
+			'refunds'       => 'Refunds',
+			'coupons'       => 'Coupons',
+			'subscriptions' => 'Subscriptions',
+			'payouts'       => 'Payouts',
+			'vendors'       => 'Vendors',
+		);
+
+		$all_plugins = array(
+			'woocommerce' => array(
+				'label'  => 'WooCommerce',
+				'fields' => array( 'orders', 'customers', 'products', 'payments', 'refunds', 'coupons', 'subscriptions', 'payouts', 'vendors' ),
+			),
+			'dokan'       => array(
+				'label'  => 'Dokan',
+				'fields' => array( 'vendors', 'orders', 'customers', 'products', 'payouts', 'refunds' ),
+			),
+			'wcfm'        => array(
+				'label'  => 'WCFM',
+				'fields' => array( 'vendors', 'orders', 'customers', 'products', 'payouts', 'refunds' ),
+			),
+			'stripe'      => array(
+				'label'  => 'Stripe',
+				'fields' => array( 'payments', 'refunds', 'payouts' ),
+			),
+			'paypal'      => array(
+				'label'  => 'PayPal',
+				'fields' => array( 'payments', 'refunds', 'payouts' ),
+			),
+		);
+
+		foreach ( $all_plugins as $slug => $def ) {
+			$slug = sanitize_key( (string) $slug );
+			if ( '' === $slug ) {
+				continue;
+			}
+
+			$plugin_meta = isset( $detected_plugins[ $slug ] ) ? $detected_plugins[ $slug ] : array();
+
+			$cfg = isset( $settings[ $slug ] ) && is_array( $settings[ $slug ] ) ? $settings[ $slug ] : array();
+			$fields_cfg = ( isset( $cfg['fields'] ) && is_array( $cfg['fields'] ) ) ? $cfg['fields'] : array();
+			$selected_fields = array();
+			foreach ( $def['fields'] as $field_key ) {
+				$field_key = sanitize_key( (string) $field_key );
+				if ( '' === $field_key ) {
+					continue;
+				}
+				if ( isset( $fields_cfg[ $field_key ] ) && (bool) $fields_cfg[ $field_key ] ) {
+					$selected_fields[] = $field_key;
+				}
+			}
+
+			$plugin_label = sanitize_text_field( (string) ( $plugin_meta['name'] ?? $def['label'] ) );
+
+			if ( ! empty( $plugin_meta ) ) {
+				$datasets = $this->collect_ecommerce_datasets( $slug, $selected_fields, $defaults );
+			} else {
+				$datasets = array( 'data' => array(), 'counts' => array(), 'errors' => array() );
+			}
+
+			$plugin_meta = is_array( $plugin_meta ) ? $plugin_meta : array();
+			$plugin_data = array(
+				'slug'            => $slug,
+				'name'            => $plugin_label,
+				'version'         => sanitize_text_field( (string) ( $plugin_meta['version'] ?? '' ) ),
+				'active'          => (bool) ( $plugin_meta['active'] ?? false ),
+				'detected'        => (bool) ( $plugin_meta['detected'] ?? false ),
+				'selected_fields' => array_values( $selected_fields ),
+				'fields_selected' => count( $selected_fields ),
+				'data'            => isset( $datasets['data'] ) && is_array( $datasets['data'] ) ? $datasets['data'] : array(),
+				'counts'          => isset( $datasets['counts'] ) && is_array( $datasets['counts'] ) ? $datasets['counts'] : array(),
+				'errors'          => isset( $datasets['errors'] ) && is_array( $datasets['errors'] ) ? $datasets['errors'] : array(),
+			);
+
+			$sheet_name = $slug;
+			$plugin_payload = array(
+				'event_type'     => 'ecommerce_synced',
+				'timestamp'      => gmdate( 'c' ),
+				'site_url'       => (string) get_site_url(),
+				'site_name'      => (string) get_bloginfo( 'name' ),
+				'admin_email'    => sanitize_email( (string) get_option( 'admin_email', '' ) ),
+				'sheet_tab'      => $sheet_name,
+				'tab'            => $sheet_name,
+				'sheet'          => $sheet_name,
+				'tab_name'       => $sheet_name,
+				'sheet_name'     => $sheet_name,
+				'worksheet'      => $sheet_name,
+				'target_tab'     => $sheet_name,
+				'card_key'       => 'ecommerce_data',
+				'plugin_slug'    => $slug,
+				'plugin_name'    => $plugin_data['name'],
+				'plugin_version' => $plugin_data['version'],
+				'plugin_active'  => $plugin_data['active'],
+			);
+
+			foreach ( $selected_fields as $field ) {
+				$plugin_payload[ $field ] = isset( $plugin_data['data'][ $field ] ) ? $plugin_data['data'][ $field ] : array();
+			}
+
+			if ( ! empty( $plugin_meta ) ) {
+				$result = w91099ch_Webhook_Dispatcher::dispatch_raw_payload( $plugin_payload, 'ecommerce_synced' );
+				if ( isset( $result['sent'] ) && $result['sent'] > 0 ) {
+					++$total_sent;
+				}
+				if ( isset( $result['errors'] ) && is_array( $result['errors'] ) && ! empty( $result['errors'] ) ) {
+					$total_errors = array_merge( $total_errors, $result['errors'] );
+				}
+			}
+
+			$sheet = array();
+			foreach ( $def['fields'] as $field ) {
+				$label = isset( $field_labels[ $field ] ) ? $field_labels[ $field ] : ucfirst( $field );
+				$enabled = in_array( $field, $selected_fields, true );
+				if ( $enabled && ! empty( $plugin_meta ) ) {
+					$sheet[ $label ] = isset( $plugin_data['data'][ $field ] ) ? $plugin_data['data'][ $field ] : array();
+				} elseif ( $enabled ) {
+					$sheet[ $label ] = array();
+				} else {
+					$sheet[ $label ] = array();
+				}
+			}
+			$sheet['Include in ecommerce sync'] = array_values( $selected_fields );
+			$sheets[ $plugin_label ] = $sheet;
+		}
+
+		return array(
+			'sheets'       => $sheets,
+			'total_sent'   => $total_sent,
+			'total_errors' => $total_errors,
+			'synced_count' => count( $sheets ),
+		);
+	}
+
+	public function ajax_sync_website_content() {
+		$nonce_ok = (bool) check_ajax_referer( 'w91099ch_nonce', 'nonce', false );
+		if ( ! $nonce_ok ) {
+			$nonce_ok = (bool) check_ajax_referer( 'w91099ch_sync_nonce', 'nonce', false );
+		}
+		if ( ! $nonce_ok ) {
+			status_header( 403 );
+			wp_send_json_error( esc_html__( 'Invalid nonce', 'w9-1099-chaser' ) );
+		}
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( esc_html__( 'Insufficient permissions', 'w9-1099-chaser' ) );
+		}
+
+		$this->enforce_admin_consent_or_fail();
+
+		try {
+			$raw_payload = isset( $_POST['payload'] ) ? wp_unslash( $_POST['payload'] ) : '';
+			if ( is_string( $raw_payload ) ) {
+				$decoded = json_decode( $raw_payload, true );
+			} else {
+				$decoded = null;
+			}
+			if ( ! is_array( $decoded ) || ! isset( $decoded['selected'] ) || ! is_array( $decoded['selected'] ) ) {
+				wp_send_json_error( esc_html__( 'Invalid payload format', 'w9-1099-chaser' ) );
+			}
+
+			$selected = $decoded['selected'];
+			$data     = array();
+			$headers  = array();
+			$count    = 0;
+
+			foreach ( $selected as $group => $items ) {
+				$group = sanitize_text_field( (string) $group );
+				if ( ! is_array( $items ) ) {
+					continue;
+				}
+				foreach ( $items as $item ) {
+					$item = sanitize_text_field( (string) $item );
+					if ( '' === $item ) {
+						continue;
+					}
+					$headers[]    = $item;
+					$data[ $item ] = $this->collect_website_content_item( $group, $item );
+					++$count;
+				}
+			}
+
+			$sheet_data = array();
+			foreach ( $data as $item_label => $item_data ) {
+				$sheet_data[ $item_label ] = $this->stringify_sync_value( $item_data );
+			}
+
+			$payload = array(
+				'Website Content' => $sheet_data,
+			);
+
+			$result = w91099ch_Webhook_Dispatcher::dispatch_raw_payload( $payload, 'website_content_synced' );
+
+			wp_send_json_success(
+				array(
+					'message'     => esc_html__( 'Website content synced successfully', 'w9-1099-chaser' ),
+					'sent'        => isset( $result['sent'] ) ? $result['sent'] : 0,
+					'items_count' => $count,
+					'errors'      => isset( $result['errors'] ) && is_array( $result['errors'] ) ? $result['errors'] : array(),
+				)
+			);
+		} catch ( Throwable $e ) {
+			$this->log( 'Website content sync error: ' . $e->getMessage() );
+			wp_send_json_error( esc_html__( 'Sync failed. Please retry.', 'w9-1099-chaser' ) );
+		}
+	}
+
+	private function collect_website_content_item( $group, $item ) {
+		$group_normalized = strtolower( trim( $group ) );
+		$item_normalized  = strtolower( trim( $item ) );
+
+		if ( strpos( $group_normalized, 'standard pages' ) !== false || strpos( $group_normalized, 'posts' ) !== false ) {
+			if ( strpos( $item_normalized, 'homepage' ) !== false ) {
+				$front_id = (int) get_option( 'page_on_front' );
+				if ( $front_id > 0 ) {
+					$post = get_post( $front_id );
+					return $post ? array( 'id' => $post->ID, 'title' => $post->post_title, 'url' => get_permalink( $post ) ) : array();
+				}
+				return array();
+			}
+			if ( strpos( $item_normalized, 'privacy policy' ) !== false ) {
+				$pp_id = (int) get_option( 'wp_page_for_privacy_policy' );
+				if ( $pp_id > 0 ) {
+					$post = get_post( $pp_id );
+					return $post ? array( 'id' => $post->ID, 'title' => $post->post_title, 'url' => get_permalink( $post ) ) : array();
+				}
+				return array();
+			}
+			if ( strpos( $item_normalized, 'blog posts' ) !== false ) {
+				$posts = get_posts( array( 'posts_per_page' => 20, 'post_type' => 'post', 'post_status' => 'publish' ) );
+				$out   = array();
+				foreach ( $posts as $p ) {
+					$out[] = array( 'id' => $p->ID, 'title' => $p->post_title, 'date' => $p->post_date, 'url' => get_permalink( $p ) );
+				}
+				return $out;
+			}
+			if ( strpos( $item_normalized, 'publishing dates' ) !== false ) {
+				global $wpdb;
+				$dates = $wpdb->get_results( "SELECT DISTINCT YEAR(post_date) as yr, MONTH(post_date) as mo FROM $wpdb->posts WHERE post_status='publish' AND post_type IN ('post','page') ORDER BY yr DESC, mo DESC LIMIT 60" );
+				return $dates ? $dates : array();
+			}
+			if ( strpos( $item_normalized, 'authors' ) !== false ) {
+				$users = get_users( array( 'who' => 'authors', 'fields' => array( 'ID', 'display_name', 'user_email' ) ) );
+				return $users ? $users : array();
+			}
+			if ( strpos( $item_normalized, 'seo metadata' ) !== false || strpos( $item_normalized, 'seo' ) !== false ) {
+				$meta = array();
+				if ( defined( 'WPSEO_VERSION' ) ) {
+					$meta['yoast_active'] = true;
+					$meta['yoast_version'] = WPSEO_VERSION;
+				}
+				if ( defined( 'RANK_MATH_VERSION' ) ) {
+					$meta['rankmath_active'] = true;
+					$meta['rankmath_version'] = RANK_MATH_VERSION;
+				}
+				$meta['has_meta_desc'] = (bool) get_option( 'blogdescription' );
+				return $meta;
+			}
+		}
+
+		if ( strpos( $group_normalized, 'media library' ) !== false || strpos( $group_normalized, 'media' ) !== false ) {
+			if ( strpos( $item_normalized, 'images' ) !== false || strpos( $item_normalized, 'original files' ) !== false ) {
+				$images = get_posts( array( 'post_type' => 'attachment', 'post_mime_type' => 'image', 'posts_per_page' => 50, 'post_status' => 'any' ) );
+				$out    = array();
+				foreach ( $images as $img ) {
+					$out[] = array( 'id' => $img->ID, 'title' => $img->post_title, 'filename' => basename( $img->guid ), 'url' => wp_get_attachment_url( $img->ID ) );
+				}
+				return $out;
+			}
+			if ( strpos( $item_normalized, 'product gallery' ) !== false ) {
+				if ( ! function_exists( 'wc_get_product' ) ) {
+					return array();
+				}
+				global $wpdb;
+				$meta_rows = $wpdb->get_results( "SELECT DISTINCT meta_value FROM {$wpdb->postmeta} WHERE meta_key = '_product_image_gallery' AND meta_value != '' LIMIT 100" );
+				$ids       = array();
+				foreach ( $meta_rows as $row ) {
+					$gallery_ids = explode( ',', $row->meta_value );
+					foreach ( $gallery_ids as $gid ) {
+						$ids[] = (int) $gid;
+					}
+				}
+				$ids = array_unique( array_filter( $ids ) );
+				$out = array();
+				foreach ( array_slice( $ids, 0, 50 ) as $id ) {
+					$url = wp_get_attachment_url( $id );
+					if ( $url ) {
+						$out[] = array( 'id' => $id, 'url' => $url );
+					}
+				}
+				return $out;
+			}
+			if ( strpos( $item_normalized, 'pdfs' ) !== false || strpos( $item_normalized, 'downloads' ) !== false ) {
+				$pdfs = get_posts( array( 'post_type' => 'attachment', 'post_mime_type' => 'application/pdf', 'posts_per_page' => 50, 'post_status' => 'any' ) );
+				$out  = array();
+				foreach ( $pdfs as $pdf ) {
+					$out[] = array( 'id' => $pdf->ID, 'title' => $pdf->post_title, 'url' => wp_get_attachment_url( $pdf->ID ) );
+				}
+				return $out;
+			}
+			if ( strpos( $item_normalized, 'videos' ) !== false ) {
+				$videos = get_posts( array( 'post_type' => 'attachment', 'post_mime_type' => array( 'video/mp4', 'video/webm', 'video/ogg' ), 'posts_per_page' => 50, 'post_status' => 'any' ) );
+				$out    = array();
+				foreach ( $videos as $vid ) {
+					$out[] = array( 'id' => $vid->ID, 'title' => $vid->post_title, 'url' => wp_get_attachment_url( $vid->ID ) );
+				}
+				return $out;
+			}
+			if ( strpos( $item_normalized, 'alt text' ) !== false ) {
+				$images = get_posts( array( 'post_type' => 'attachment', 'post_mime_type' => 'image', 'posts_per_page' => 100, 'post_status' => 'any' ) );
+				$out    = array();
+				foreach ( $images as $img ) {
+					$alt = get_post_meta( $img->ID, '_wp_attachment_image_alt', true );
+					$out[] = array( 'id' => $img->ID, 'title' => $img->post_title, 'alt_text' => $alt ? $alt : '' );
+				}
+				return $out;
+			}
+		}
+
+		if ( strpos( $group_normalized, 'comments' ) !== false || strpos( $group_normalized, 'reviews' ) !== false ) {
+			if ( strpos( $item_normalized, 'reviewer names' ) !== false || strpos( $item_normalized, 'names' ) !== false ) {
+				$comments = get_comments( array( 'number' => 100 ) );
+				$out      = array();
+				foreach ( $comments as $c ) {
+					$out[] = array( 'id' => $c->comment_ID, 'author' => $c->comment_author, 'email' => $c->comment_author_email );
+				}
+				return $out;
+			}
+			if ( strpos( $item_normalized, 'emails' ) !== false ) {
+				$comments = get_comments( array( 'number' => 100 ) );
+				$out      = array();
+				foreach ( $comments as $c ) {
+					if ( $c->comment_author_email ) {
+						$out[] = array( 'id' => $c->comment_ID, 'email' => $c->comment_author_email );
+					}
+				}
+				return $out;
+			}
+			if ( strpos( $item_normalized, 'star ratings' ) !== false ) {
+				if ( ! function_exists( 'wc_get_product' ) ) {
+					return array();
+				}
+				global $wpdb;
+				$ratings = $wpdb->get_results( "SELECT meta_value FROM {$wpdb->commentmeta} WHERE meta_key = 'rating' LIMIT 200" );
+				return $ratings ? $ratings : array();
+			}
+			if ( strpos( $item_normalized, 'comment text' ) !== false ) {
+				$comments = get_comments( array( 'number' => 100 ) );
+				$out      = array();
+				foreach ( $comments as $c ) {
+					$out[] = array( 'id' => $c->comment_ID, 'text' => $c->comment_content );
+				}
+				return $out;
+			}
+			if ( strpos( $item_normalized, 'approval status' ) !== false ) {
+				$comments = get_comments( array( 'number' => 100 ) );
+				$out      = array();
+				foreach ( $comments as $c ) {
+					$out[] = array( 'id' => $c->comment_ID, 'approved' => (int) $c->comment_approved );
+				}
+				return $out;
+			}
+			if ( strpos( $item_normalized, 'timestamps' ) !== false ) {
+				$comments = get_comments( array( 'number' => 100 ) );
+				$out      = array();
+				foreach ( $comments as $c ) {
+					$out[] = array( 'id' => $c->comment_ID, 'date' => $c->comment_date );
+				}
+				return $out;
+			}
+		}
+
+		if ( strpos( $group_normalized, 'categories' ) !== false || strpos( $group_normalized, 'tags' ) !== false ) {
+			if ( strpos( $item_normalized, 'product categories' ) !== false ) {
+				if ( ! taxonomy_exists( 'product_cat' ) ) {
+					return array();
+				}
+				$terms = get_terms( array( 'taxonomy' => 'product_cat', 'hide_empty' => false ) );
+				$out   = array();
+				foreach ( $terms as $t ) {
+					$out[] = array( 'id' => $t->term_id, 'name' => $t->name, 'slug' => $t->slug, 'count' => $t->count );
+				}
+				return $out;
+			}
+			if ( strpos( $item_normalized, 'blog categories' ) !== false ) {
+				$terms = get_terms( array( 'taxonomy' => 'category', 'hide_empty' => false ) );
+				$out   = array();
+				foreach ( $terms as $t ) {
+					$out[] = array( 'id' => $t->term_id, 'name' => $t->name, 'slug' => $t->slug, 'count' => $t->count );
+				}
+				return $out;
+			}
+			if ( strpos( $item_normalized, 'tags' ) !== false ) {
+				$terms = get_terms( array( 'taxonomy' => 'post_tag', 'hide_empty' => false ) );
+				$out   = array();
+				foreach ( $terms as $t ) {
+					$out[] = array( 'id' => $t->term_id, 'name' => $t->name, 'slug' => $t->slug, 'count' => $t->count );
+				}
+				return $out;
+			}
+			if ( strpos( $item_normalized, 'hierarchical' ) !== false ) {
+				$cats = get_terms( array( 'taxonomy' => 'category', 'hide_empty' => false ) );
+				$out  = array();
+				foreach ( $cats as $c ) {
+					$parent = $c->parent > 0 ? get_term( $c->parent ) : null;
+					$out[] = array( 'id' => $c->term_id, 'name' => $c->name, 'parent' => $parent ? $parent->name : 'none', 'depth' => $c->parent > 0 ? 1 : 0 );
+				}
+				return $out;
+			}
+			if ( strpos( $item_normalized, 'url slugs' ) !== false || strpos( $item_normalized, 'slugs' ) !== false ) {
+				$cats = get_terms( array( 'taxonomy' => array( 'category', 'post_tag' ), 'hide_empty' => false ) );
+				$out  = array();
+				foreach ( $cats as $c ) {
+					$out[] = array( 'id' => $c->term_id, 'name' => $c->name, 'slug' => $c->slug, 'taxonomy' => $c->taxonomy );
+				}
+				return $out;
+			}
+		}
+
+		return array();
+	}
+
+	public function ajax_sync_analytics() {
+		$nonce_ok = (bool) check_ajax_referer( 'w91099ch_nonce', 'nonce', false );
+		if ( ! $nonce_ok ) {
+			$nonce_ok = (bool) check_ajax_referer( 'w91099ch_sync_nonce', 'nonce', false );
+		}
+		if ( ! $nonce_ok ) {
+			status_header( 403 );
+			wp_send_json_error( esc_html__( 'Invalid nonce', 'w9-1099-chaser' ) );
+		}
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( esc_html__( 'Insufficient permissions', 'w9-1099-chaser' ) );
+		}
+
+		$this->enforce_admin_consent_or_fail();
+
+		try {
+			$raw_payload = isset( $_POST['payload'] ) ? wp_unslash( $_POST['payload'] ) : '';
+			if ( is_string( $raw_payload ) ) {
+				$decoded = json_decode( $raw_payload, true );
+			} else {
+				$decoded = null;
+			}
+			if ( ! is_array( $decoded ) || ! isset( $decoded['selected'] ) || ! is_array( $decoded['selected'] ) ) {
+				wp_send_json_error( esc_html__( 'Invalid payload format', 'w9-1099-chaser' ) );
+			}
+
+			$selected = $decoded['selected'];
+			$data     = array();
+			$headers  = array();
+			$count    = 0;
+
+			foreach ( $selected as $group => $items ) {
+				$group = sanitize_text_field( (string) $group );
+				if ( ! is_array( $items ) ) {
+					continue;
+				}
+				foreach ( $items as $item ) {
+					$item = sanitize_text_field( (string) $item );
+					if ( '' === $item ) {
+						continue;
+					}
+					$headers[]     = $item;
+					$data[ $item ] = $this->collect_analytics_item( $group, $item );
+					++$count;
+				}
+			}
+
+			$sheet_data = array();
+			foreach ( $data as $item_label => $item_data ) {
+				$sheet_data[ $item_label ] = $this->stringify_sync_value( $item_data );
+			}
+
+			$payload = array(
+				'Analytics & Customer Relationship' => $sheet_data,
+			);
+
+			$result = w91099ch_Webhook_Dispatcher::dispatch_raw_payload( $payload, 'analytics_synced' );
+
+			wp_send_json_success(
+				array(
+					'message'     => esc_html__( 'Analytics data synced successfully', 'w9-1099-chaser' ),
+					'sent'        => isset( $result['sent'] ) ? $result['sent'] : 0,
+					'items_count' => $count,
+					'errors'      => isset( $result['errors'] ) && is_array( $result['errors'] ) ? $result['errors'] : array(),
+				)
+			);
+		} catch ( Throwable $e ) {
+			$this->log( 'Analytics sync error: ' . $e->getMessage() );
+			wp_send_json_error( esc_html__( 'Sync failed. Please retry.', 'w9-1099-chaser' ) );
+		}
+	}
+
+	private function collect_analytics_item( $group, $item ) {
+		$group_normalized = strtolower( trim( $group ) );
+		$item_normalized  = strtolower( trim( $item ) );
+
+		if ( strpos( $group_normalized, 'analytics reports' ) !== false ) {
+			if ( strpos( $item_normalized, 'gross sales' ) !== false ) {
+				$total = 0;
+				if ( function_exists( 'wc_get_order_types' ) ) {
+					global $wpdb;
+					$total = (float) $wpdb->get_var(
+						"SELECT SUM(meta_value) FROM {$wpdb->prefix}postmeta pm
+						INNER JOIN {$wpdb->prefix}posts p ON pm.post_id = p.ID
+						WHERE p.post_type IN ('shop_order') AND p.post_status IN ('wc-completed','wc-processing')
+						AND pm.meta_key = '_order_total'"
+					);
+				}
+				return array( 'value' => $total > 0 ? $total : 0, 'currency' => function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : 'USD' );
+			}
+			if ( strpos( $item_normalized, 'net sales' ) !== false ) {
+				$gross = 0;
+				$refunds = 0;
+				if ( function_exists( 'wc_get_order_types' ) ) {
+					global $wpdb;
+					$gross   = (float) $wpdb->get_var( "SELECT SUM(meta_value) FROM {$wpdb->prefix}postmeta pm INNER JOIN {$wpdb->prefix}posts p ON pm.post_id = p.ID WHERE p.post_type IN ('shop_order') AND p.post_status IN ('wc-completed','wc-processing') AND pm.meta_key = '_order_total'" );
+					$refunds = (float) $wpdb->get_var( "SELECT SUM(meta_value) FROM {$wpdb->prefix}postmeta pm INNER JOIN {$wpdb->prefix}posts p ON pm.post_id = p.ID WHERE p.post_type = 'shop_order_refund' AND pm.meta_key = '_refund_amount'" );
+				}
+				$net = $gross - $refunds;
+				return array( 'value' => $net > 0 ? $net : 0, 'currency' => function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : 'USD' );
+			}
+			if ( strpos( $item_normalized, 'refund totals' ) !== false ) {
+				$total_refunds = 0;
+				if ( function_exists( 'wc_get_order_types' ) ) {
+					global $wpdb;
+					$total_refunds = (float) $wpdb->get_var( "SELECT SUM(meta_value) FROM {$wpdb->prefix}postmeta pm INNER JOIN {$wpdb->prefix}posts p ON pm.post_id = p.ID WHERE p.post_type = 'shop_order_refund' AND pm.meta_key = '_refund_amount'" );
+				}
+				return array( 'value' => $total_refunds > 0 ? $total_refunds : 0, 'currency' => function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : 'USD' );
+			}
+			if ( strpos( $item_normalized, 'total orders' ) !== false ) {
+				$total_orders = 0;
+				if ( function_exists( 'wc_get_order_types' ) ) {
+					global $wpdb;
+					$total_orders = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}posts WHERE post_type IN ('shop_order') AND post_status IN ('wc-completed','wc-processing','wc-on-hold')" );
+				}
+				return array( 'count' => $total_orders );
+			}
+			if ( strpos( $item_normalized, 'product quantity sales' ) !== false ) {
+				$quantities = array();
+				if ( function_exists( 'wc_get_products' ) ) {
+					$products = wc_get_products( array( 'limit' => 10, 'orderby' => 'total_sales', 'order' => 'DESC' ) );
+					foreach ( $products as $product ) {
+						$quantities[] = array(
+							'id'       => $product->get_id(),
+							'name'     => $product->get_name(),
+							'sold'     => $product->get_total_sales(),
+							'price'    => $product->get_price(),
+						);
+					}
+				}
+				return $quantities;
+			}
+		}
+
+		if ( strpos( $group_normalized, 'tax & shipping' ) !== false || strpos( $group_normalized, 'tax' ) !== false ) {
+			if ( strpos( $item_normalized, 'tax rates' ) !== false ) {
+				$rates = array();
+				if ( function_exists( 'wc_get_tax_classes' ) ) {
+					global $wpdb;
+					$results = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}woocommerce_tax_rates LIMIT 100" );
+					foreach ( $results as $row ) {
+						$rates[] = array(
+							'id'     => (int) $row->tax_rate_id,
+							'state'  => $row->tax_rate_state,
+							'zip'    => $row->tax_rate_postcode,
+							'rate'   => (float) $row->tax_rate,
+							'name'   => $row->tax_rate_name,
+						);
+					}
+				}
+				return $rates;
+			}
+			if ( strpos( $item_normalized, 'shipping zones' ) !== false ) {
+				$zones = array();
+				if ( function_exists( 'WC_Shipping_Zones' ) ) {
+					$zones_list = WC_Shipping_Zones::get_zones();
+					foreach ( $zones_list as $zone ) {
+						$zones[] = array(
+							'id'   => $zone['id'],
+							'name' => $zone['zone_name'],
+						);
+					}
+				}
+				return $zones;
+			}
+			if ( strpos( $item_normalized, 'shipping class rules' ) !== false ) {
+				$classes = array();
+				if ( function_exists( 'get_terms' ) ) {
+					$terms = get_terms( array( 'taxonomy' => 'product_shipping_class', 'hide_empty' => false ) );
+					foreach ( $terms as $term ) {
+						$classes[] = array( 'id' => $term->term_id, 'name' => $term->name, 'slug' => $term->slug );
+					}
+				}
+				return $classes;
+			}
+			if ( strpos( $item_normalized, 'flat rate pricing' ) !== false ) {
+				$flat_rates = array();
+				if ( function_exists( 'WC' ) ) {
+					$methods = WC()->shipping()->get_shipping_methods();
+					foreach ( $methods as $method ) {
+						if ( 'flat_rate' === $method->id ) {
+							$settings = get_option( 'woocommerce_flat_rate_settings', array() );
+							$flat_rates[] = array(
+								'title'    => isset( $settings['title'] ) ? $settings['title'] : 'Flat Rate',
+								'cost'     => isset( $settings['cost'] ) ? (float) $settings['cost'] : 0,
+								'enabled'  => 'yes' === ( isset( $settings['enabled'] ) ? $settings['enabled'] : 'no' ),
+							);
+						}
+					}
+				}
+				return $flat_rates;
+			}
+		}
+
+		if ( strpos( $group_normalized, 'customer behavior' ) !== false || strpos( $group_normalized, 'behavior' ) !== false ) {
+			if ( strpos( $item_normalized, 'wishlist data' ) !== false ) {
+				$wishlist = array();
+				if ( function_exists( 'WC' ) && defined( 'YITH_WCWL' ) ) {
+					global $wpdb;
+					$wishlist = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}yith_wcwl_items LIMIT 100", ARRAY_A );
+					if ( ! is_array( $wishlist ) ) {
+						$wishlist = array();
+					}
+				}
+				return $wishlist;
+			}
+			if ( strpos( $item_normalized, 'abandoned carts' ) !== false ) {
+				$carts = array();
+				if ( function_exists( 'WC' ) ) {
+					global $wpdb;
+					$carts = $wpdb->get_results(
+						"SELECT id, user_id, user_email, cart_contents, cart_total, updated_at
+						FROM {$wpdb->prefix}wc_abandoned_cart_history
+						ORDER BY updated_at DESC LIMIT 50",
+						ARRAY_A
+					);
+					if ( ! is_array( $carts ) ) {
+						$carts = array();
+					}
+				}
+				return $carts;
+			}
+			if ( strpos( $item_normalized, 'cart emails' ) !== false ) {
+				$emails = array();
+				if ( function_exists( 'WC' ) ) {
+					global $wpdb;
+					$emails = $wpdb->get_results(
+						"SELECT id, email, cart_total, added_at
+						FROM {$wpdb->prefix}wc_abandoned_cart_history
+						WHERE user_email IS NOT NULL AND user_email != ''
+						ORDER BY added_at DESC LIMIT 50",
+						ARRAY_A
+					);
+					if ( ! is_array( $emails ) ) {
+						$emails = array();
+					}
+				}
+				return $emails;
+			}
+			if ( strpos( $item_normalized, 'cart items' ) !== false ) {
+				$cart_items = array();
+				if ( function_exists( 'WC' ) ) {
+					global $wpdb;
+					$carts = $wpdb->get_results(
+						"SELECT id, cart_contents, updated_at
+						FROM {$wpdb->prefix}wc_abandoned_cart_history
+						ORDER BY updated_at DESC LIMIT 20",
+						ARRAY_A
+					);
+					foreach ( $carts as $cart ) {
+						$contents = maybe_unserialize( $cart['cart_contents'] );
+						if ( is_array( $contents ) ) {
+							foreach ( $contents as $product_id => $data ) {
+								$cart_items[] = array(
+									'cart_id'    => $cart['id'],
+									'product_id' => (int) $product_id,
+									'quantity'   => isset( $data['quantity'] ) ? (int) $data['quantity'] : 0,
+									'line_total' => isset( $data['line_total'] ) ? (float) $data['line_total'] : 0,
+								);
+							}
+						}
+					}
+				}
+				return $cart_items;
+			}
+			if ( strpos( $item_normalized, 'checkout timestamps' ) !== false ) {
+				$timestamps = array();
+				if ( function_exists( 'wc_get_orders' ) ) {
+					$orders = wc_get_orders( array( 'limit' => 50, 'orderby' => 'date', 'order' => 'DESC' ) );
+					foreach ( $orders as $order ) {
+						$timestamps[] = array(
+							'id'          => $order->get_id(),
+							'date'        => $order->get_date_created() ? $order->get_date_created()->format( 'c' ) : '',
+							'status'      => $order->get_status(),
+							'total'       => (float) $order->get_total(),
+							'customer_id' => $order->get_customer_id(),
+						);
+					}
+				}
+				return $timestamps;
+			}
+		}
+
+		return array();
+	}
+
+	private function stringify_sync_value( $data ) {
+		if ( is_string( $data ) ) {
+			return $data;
+		}
+		if ( ! is_array( $data ) ) {
+			return (string) $data;
+		}
+		if ( empty( $data ) ) {
+			return '';
+		}
+		if ( isset( $data['title'] ) && isset( $data['url'] ) ) {
+			$title = (string) $data['title'];
+			$url   = (string) $data['url'];
+			return $title . ( $url ? ' - ' . $url : '' );
+		}
+		if ( isset( $data['value'] ) ) {
+			$value = (float) $data['value'];
+			$curr  = isset( $data['currency'] ) ? (string) $data['currency'] : '';
+			return number_format( $value, 2 ) . ( $curr ? ' ' . $curr : '' );
+		}
+		if ( isset( $data['count'] ) ) {
+			return (int) $data['count'] . ' items';
+		}
+		if ( isset( $data['name'] ) && isset( $data['slug'] ) ) {
+			return (string) $data['name'] . ' (' . (string) $data['slug'] . ')';
+		}
+		if ( isset( $data['cost'] ) ) {
+			$cost = (float) $data['cost'];
+			$title = isset( $data['title'] ) ? (string) $data['title'] : '';
+			$enabled = isset( $data['enabled'] ) ? ( $data['enabled'] ? 'enabled' : 'disabled' ) : '';
+			return ( $title ? $title . ' - ' : '' ) . '$' . number_format( $cost, 2 ) . ( $enabled ? ' (' . $enabled . ')' : '' );
+		}
+		$is_list = false;
+		foreach ( $data as $k => $v ) {
+			if ( is_int( $k ) && is_array( $v ) ) {
+				$is_list = true;
+				break;
+			}
+		}
+		if ( $is_list ) {
+			$parts = array();
+			$count = count( $data );
+			$limit = 10;
+			foreach ( $data as $i => $entry ) {
+				if ( $i >= $limit ) {
+					break;
+				}
+				if ( is_array( $entry ) ) {
+					$label = '';
+					if ( isset( $entry['title'] ) ) {
+						$label = (string) $entry['title'];
+					} elseif ( isset( $entry['name'] ) ) {
+						$label = (string) $entry['name'];
+					} elseif ( isset( $entry['email'] ) ) {
+						$label = (string) $entry['email'];
+					} elseif ( isset( $entry['author'] ) ) {
+						$label = (string) $entry['author'];
+					} else {
+						$label = '#' . (string) ( $i + 1 );
+					}
+					$parts[] = $label;
+				} else {
+					$parts[] = (string) $entry;
+				}
+			}
+			$result = implode( ', ', $parts );
+			if ( $count > $limit ) {
+				$result .= ' +' . ( $count - $limit ) . ' more';
+			}
+			return $result;
+		}
+		$pairs = array();
+		foreach ( $data as $k => $v ) {
+			if ( is_bool( $v ) ) {
+				$pairs[] = (string) $k . ': ' . ( $v ? 'yes' : 'no' );
+			} elseif ( is_scalar( $v ) ) {
+				$pairs[] = (string) $k . ': ' . (string) $v;
+			}
+		}
+		return ! empty( $pairs ) ? implode( ', ', $pairs ) : wp_json_encode( $data );
+	}
+
+	public function ajax_sync_system_config() {
+		$nonce_ok = (bool) check_ajax_referer( 'w91099ch_nonce', 'nonce', false );
+		if ( ! $nonce_ok ) {
+			$nonce_ok = (bool) check_ajax_referer( 'w91099ch_sync_nonce', 'nonce', false );
+		}
+		if ( ! $nonce_ok ) {
+			status_header( 403 );
+			wp_send_json_error( esc_html__( 'Invalid nonce', 'w9-1099-chaser' ) );
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( esc_html__( 'Insufficient permissions', 'w9-1099-chaser' ) );
+		}
+		$this->enforce_admin_consent_or_fail();
+		try {
+			$raw_payload = isset( $_POST['payload'] ) ? wp_unslash( $_POST['payload'] ) : '';
+			$decoded = is_string( $raw_payload ) ? json_decode( $raw_payload, true ) : null;
+			if ( ! is_array( $decoded ) || ! isset( $decoded['selected'] ) || ! is_array( $decoded['selected'] ) ) {
+				wp_send_json_error( esc_html__( 'Invalid payload format', 'w9-1099-chaser' ) );
+			}
+			$data  = array();
+			$count = 0;
+			foreach ( $decoded['selected'] as $group => $items ) {
+				$group = sanitize_text_field( (string) $group );
+				if ( ! is_array( $items ) ) { continue; }
+				foreach ( $items as $item ) {
+					$item = sanitize_text_field( (string) $item );
+					if ( '' === $item ) { continue; }
+					$data[ $item ] = $this->collect_system_config_item( $group, $item );
+					++$count;
+				}
+			}
+			$sheet_data = array();
+			foreach ( $data as $label => $val ) {
+				$sheet_data[ $label ] = $this->stringify_sync_value( $val );
+			}
+			$result = w91099ch_Webhook_Dispatcher::dispatch_raw_payload(
+				array( 'System Configuration & Design Sync' => $sheet_data ),
+				'system_config_synced'
+			);
+			wp_send_json_success( array(
+				'message'     => esc_html__( 'System config synced successfully', 'w9-1099-chaser' ),
+				'sent'        => isset( $result['sent'] ) ? $result['sent'] : 0,
+				'items_count' => $count,
+				'errors'      => isset( $result['errors'] ) && is_array( $result['errors'] ) ? $result['errors'] : array(),
+			) );
+		} catch ( Throwable $e ) {
+			$this->log( 'System config sync error: ' . $e->getMessage() );
+			wp_send_json_error( esc_html__( 'Sync failed. Please retry.', 'w9-1099-chaser' ) );
+		}
+	}
+
+	public function ajax_sync_security_access() {
+		$nonce_ok = (bool) check_ajax_referer( 'w91099ch_nonce', 'nonce', false );
+		if ( ! $nonce_ok ) {
+			$nonce_ok = (bool) check_ajax_referer( 'w91099ch_sync_nonce', 'nonce', false );
+		}
+		if ( ! $nonce_ok ) {
+			status_header( 403 );
+			wp_send_json_error( esc_html__( 'Invalid nonce', 'w9-1099-chaser' ) );
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( esc_html__( 'Insufficient permissions', 'w9-1099-chaser' ) );
+		}
+		$this->enforce_admin_consent_or_fail();
+		try {
+			$raw_payload = isset( $_POST['payload'] ) ? wp_unslash( $_POST['payload'] ) : '';
+			$decoded = is_string( $raw_payload ) ? json_decode( $raw_payload, true ) : null;
+			if ( ! is_array( $decoded ) || ! isset( $decoded['selected'] ) || ! is_array( $decoded['selected'] ) ) {
+				wp_send_json_error( esc_html__( 'Invalid payload format', 'w9-1099-chaser' ) );
+			}
+			$data  = array();
+			$count = 0;
+			foreach ( $decoded['selected'] as $group => $items ) {
+				$group = sanitize_text_field( (string) $group );
+				if ( ! is_array( $items ) ) { continue; }
+				foreach ( $items as $item ) {
+					$item = sanitize_text_field( (string) $item );
+					if ( '' === $item ) { continue; }
+					$data[ $item ] = $this->collect_security_access_item( $group, $item );
+					++$count;
+				}
+			}
+			$sheet_data = array();
+			foreach ( $data as $label => $val ) {
+				$sheet_data[ $label ] = $this->stringify_sync_value( $val );
+			}
+			$result = w91099ch_Webhook_Dispatcher::dispatch_raw_payload(
+				array( 'User Security & System Access Sync' => $sheet_data ),
+				'security_access_synced'
+			);
+			wp_send_json_success( array(
+				'message'     => esc_html__( 'Security & access data synced successfully', 'w9-1099-chaser' ),
+				'sent'        => isset( $result['sent'] ) ? $result['sent'] : 0,
+				'items_count' => $count,
+				'errors'      => isset( $result['errors'] ) && is_array( $result['errors'] ) ? $result['errors'] : array(),
+			) );
+		} catch ( Throwable $e ) {
+			$this->log( 'Security access sync error: ' . $e->getMessage() );
+			wp_send_json_error( esc_html__( 'Sync failed. Please retry.', 'w9-1099-chaser' ) );
+		}
+	}
+
+	public function ajax_sync_payments() {
+		$nonce_ok = (bool) check_ajax_referer( 'w91099ch_nonce', 'nonce', false );
+		if ( ! $nonce_ok ) {
+			$nonce_ok = (bool) check_ajax_referer( 'w91099ch_sync_nonce', 'nonce', false );
+		}
+		if ( ! $nonce_ok ) {
+			status_header( 403 );
+			wp_send_json_error( esc_html__( 'Invalid nonce', 'w9-1099-chaser' ) );
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( esc_html__( 'Insufficient permissions', 'w9-1099-chaser' ) );
+		}
+		$this->enforce_admin_consent_or_fail();
+		try {
+			$raw_payload = isset( $_POST['payload'] ) ? wp_unslash( $_POST['payload'] ) : '';
+			$decoded = is_string( $raw_payload ) ? json_decode( $raw_payload, true ) : null;
+			if ( ! is_array( $decoded ) || ! isset( $decoded['selected'] ) || ! is_array( $decoded['selected'] ) ) {
+				wp_send_json_error( esc_html__( 'Invalid payload format', 'w9-1099-chaser' ) );
+			}
+			$data  = array();
+			$count = 0;
+			foreach ( $decoded['selected'] as $group => $items ) {
+				$group = sanitize_text_field( (string) $group );
+				if ( ! is_array( $items ) ) { continue; }
+				foreach ( $items as $item ) {
+					$item = sanitize_text_field( (string) $item );
+					if ( '' === $item ) { continue; }
+					$data[ $item ] = $this->collect_payments_item( $group, $item );
+					++$count;
+				}
+			}
+			$sheet_data = array();
+			foreach ( $data as $label => $val ) {
+				$sheet_data[ $label ] = $this->stringify_sync_value( $val );
+			}
+			$result = w91099ch_Webhook_Dispatcher::dispatch_raw_payload(
+				array( 'Payment Gateway & Third-Party Integrations Sync' => $sheet_data ),
+				'payments_synced'
+			);
+			wp_send_json_success( array(
+				'message'     => esc_html__( 'Payment & integration data synced successfully', 'w9-1099-chaser' ),
+				'sent'        => isset( $result['sent'] ) ? $result['sent'] : 0,
+				'items_count' => $count,
+				'errors'      => isset( $result['errors'] ) && is_array( $result['errors'] ) ? $result['errors'] : array(),
+			) );
+		} catch ( Throwable $e ) {
+			$this->log( 'Payments sync error: ' . $e->getMessage() );
+			wp_send_json_error( esc_html__( 'Sync failed. Please retry.', 'w9-1099-chaser' ) );
+		}
+	}
+
+	private function collect_system_config_item( $group, $item ) {
+		$g = strtolower( trim( $group ) );
+		$i = strtolower( trim( $item ) );
+
+		if ( strpos( $g, 'wordpress settings' ) !== false ) {
+			if ( strpos( $i, 'site title' ) !== false ) {
+				return get_bloginfo( 'name' );
+			}
+			if ( strpos( $i, 'tagline' ) !== false ) {
+				return get_bloginfo( 'description' );
+			}
+			if ( strpos( $i, 'permalinks' ) !== false ) {
+				$structure = get_option( 'permalink_structure' );
+				return $structure ? $structure : 'Plain';
+			}
+			if ( strpos( $i, 'timezone' ) !== false ) {
+				return wp_timezone_string();
+			}
+			if ( strpos( $i, 'reading' ) !== false || strpos( $i, 'writing' ) !== false ) {
+				return 'Posts per page: ' . get_option( 'posts_per_page' ) . ', Site URL: ' . get_site_url();
+			}
+		}
+
+		if ( strpos( $g, 'plugin settings' ) !== false ) {
+			if ( strpos( $i, 'seo' ) !== false ) {
+				$active = array();
+				if ( defined( 'WPSEO_VERSION' ) ) { $active[] = 'Yoast v' . WPSEO_VERSION; }
+				if ( defined( 'RANK_MATH_VERSION' ) ) { $active[] = 'RankMath v' . RANK_MATH_VERSION; }
+				return ! empty( $active ) ? implode( ', ', $active ) : 'No SEO plugin detected';
+			}
+			if ( strpos( $i, 'cache' ) !== false ) {
+				$cache = array();
+				if ( defined( 'W3TC' ) ) { $cache[] = 'W3 Total Cache'; }
+				if ( defined( 'WPSC_VERSION' ) ) { $cache[] = 'WP Super Cache v' . WPSC_VERSION; }
+				if ( defined( 'LSCWP_V' ) ) { $cache[] = 'LiteSpeed Cache'; }
+				return ! empty( $cache ) ? implode( ', ', $cache ) : 'No cache plugin detected';
+			}
+			if ( strpos( $i, 'form plugin' ) !== false ) {
+				$forms = array();
+				if ( defined( 'FLUENTFORM' ) ) { $forms[] = 'Fluent Forms'; }
+				if ( defined( 'WPFORMS_VERSION' ) ) { $forms[] = 'WPForms v' . WPFORMS_VERSION; }
+				if ( class_exists( 'GFForms' ) ) { $forms[] = 'Gravity Forms'; }
+				return ! empty( $forms ) ? implode( ', ', $forms ) : 'No form plugin detected';
+			}
+			if ( strpos( $i, 'security plugin' ) !== false ) {
+				$sec = array();
+				if ( defined( 'WORDFENCE_VERSION' ) ) { $sec[] = 'Wordfence v' . WORDFENCE_VERSION; }
+				if ( defined( 'SUCURISCAN_VERSION' ) ) { $sec[] = 'Sucuri v' . SUCURISCAN_VERSION; }
+				if ( class_exists( 'iThemesSecurity' ) ) { $sec[] = 'iThemes Security'; }
+				return ! empty( $sec ) ? implode( ', ', $sec ) : 'No security plugin detected';
+			}
+			if ( strpos( $i, 'json export' ) !== false ) {
+				return 'JSON export configured';
+			}
+		}
+
+		if ( strpos( $g, 'theme customizer' ) !== false ) {
+			$theme = wp_get_theme();
+			if ( strpos( $i, 'layout' ) !== false ) {
+				$mods = get_theme_mods();
+				$layout = isset( $mods['layout'] ) ? (string) $mods['layout'] : 'Default';
+				return 'Theme: ' . $theme->get( 'Name' ) . ', Layout: ' . $layout;
+			}
+			if ( strpos( $i, 'color' ) !== false ) {
+				$mods = get_theme_mods();
+				$colors = array();
+				if ( isset( $mods['primary_color'] ) ) { $colors[] = 'Primary: ' . $mods['primary_color']; }
+				if ( isset( $mods['secondary_color'] ) ) { $colors[] = 'Secondary: ' . $mods['secondary_color']; }
+				return ! empty( $colors ) ? implode( ', ', $colors ) : 'Theme: ' . $theme->get( 'Name' );
+			}
+			if ( strpos( $i, 'typography' ) !== false ) {
+				$mods = get_theme_mods();
+				$font = isset( $mods['font_family'] ) ? (string) $mods['font_family'] : ( isset( $mods['typography'] ) ? (string) $mods['typography'] : 'Default theme font' );
+				return 'Font: ' . $font;
+			}
+			if ( strpos( $i, 'widget' ) !== false ) {
+				$sidebars = wp_get_sidebars_widgets();
+				$count    = 0;
+				if ( is_array( $sidebars ) ) {
+					foreach ( $sidebars as $area => $widgets ) {
+						if ( 'wp_inactive_widgets' !== $area && is_array( $widgets ) ) {
+							$count += count( $widgets );
+						}
+					}
+				}
+				return $count . ' active widgets across ' . ( is_array( $sidebars ) ? count( $sidebars ) - 1 : 0 ) . ' widget areas';
+			}
+		}
+
+		if ( strpos( $g, 'database structure' ) !== false ) {
+			global $wpdb;
+			if ( strpos( $i, 'wp_posts' ) !== false ) {
+				$c = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts}" );
+				return $c . ' rows';
+			}
+			if ( strpos( $i, 'wp_options' ) !== false ) {
+				$c = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options}" );
+				return $c . ' rows';
+			}
+			if ( strpos( $i, 'wp_postmeta' ) !== false ) {
+				$c = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->postmeta}" );
+				return $c . ' rows';
+			}
+			if ( strpos( $i, 'custom sql' ) !== false || strpos( $i, 'custom' ) !== false ) {
+				$tables = $wpdb->get_results( "SHOW TABLES" );
+				$prefix = $wpdb->prefix;
+				$custom = array();
+				if ( is_array( $tables ) ) {
+					foreach ( $tables as $tbl ) {
+						$tname = current( (array) $tbl );
+						if ( 0 !== strpos( $tname, $prefix ) ) {
+							$custom[] = $tname;
+						}
+					}
+				}
+				return count( $custom ) . ' custom (non-WP-prefixed) tables' . ( ! empty( $custom ) ? ': ' . implode( ', ', array_slice( $custom, 0, 20 ) ) : '' );
+			}
+		}
+
+		return array();
+	}
+
+	private function collect_security_access_item( $group, $item ) {
+		$g = strtolower( trim( $group ) );
+		$i = strtolower( trim( $item ) );
+
+		if ( strpos( $g, 'user accounts' ) !== false ) {
+			if ( strpos( $i, 'user profiles' ) !== false ) {
+				$count = count_users();
+				$total = isset( $count['total_users'] ) ? (int) $count['total_users'] : 0;
+				$roles = array();
+				if ( isset( $count['avail_roles'] ) && is_array( $count['avail_roles'] ) ) {
+					foreach ( $count['avail_roles'] as $role => $c ) {
+						if ( $c > 0 ) { $roles[] = $role . '(' . $c . ')'; }
+					}
+				}
+				return $total . ' users: ' . implode( ', ', $roles );
+			}
+			if ( strpos( $i, 'roles' ) !== false ) {
+				global $wp_roles;
+				if ( ! isset( $wp_roles ) ) { $wp_roles = new WP_Roles(); }
+				$names = array();
+				foreach ( $wp_roles->roles as $slug => $info ) {
+					$names[] = (string) $info['name'] . ' (' . $slug . ')';
+				}
+				return implode( ', ', $names );
+			}
+			if ( strpos( $i, 'account meta' ) !== false ) {
+				global $wpdb;
+				$meta_keys = $wpdb->get_col( "SELECT DISTINCT meta_key FROM {$wpdb->usermeta} ORDER BY meta_key LIMIT 50" );
+				return count( $meta_keys ) . ' distinct meta keys: ' . implode( ', ', $meta_keys );
+			}
+			if ( strpos( $i, 'password' ) !== false || strpos( $i, 'encrypted' ) !== false ) {
+				return function_exists( 'wp_hash_password' ) ? 'Uses wp_hash_password() (PASSWORD_BCRYPT)' : 'Standard WordPress hashing';
+			}
+		}
+
+		if ( strpos( $g, 'activity logs' ) !== false ) {
+			if ( strpos( $i, 'login history' ) !== false ) {
+				global $wpdb;
+				$out = array();
+
+				if ( defined( 'WORDFENCE_VERSION' ) ) {
+					$table = $wpdb->prefix . 'wflogins';
+					if ( $wpdb->get_var( "SHOW TABLES LIKE '{$table}'" ) === $table ) {
+						$logs = $wpdb->get_results(
+							"SELECT ip, username, time, success, type FROM {$table} ORDER BY time DESC LIMIT 100"
+						);
+						foreach ( (array) $logs as $row ) {
+							$out[] = array(
+								'username' => $row->username,
+								'ip'       => $row->ip,
+								'time'     => $row->time ? gmdate( 'c', (int) $row->time ) : '',
+								'type'     => $row->type,
+								'success'  => $row->success ? 'Yes' : 'No',
+							);
+						}
+					}
+				}
+
+				if ( empty( $out ) && defined( 'SIMPLE_HISTORY_VERSION' ) ) {
+					$table = $wpdb->prefix . 'simple_history';
+					if ( $wpdb->get_var( "SHOW TABLES LIKE '{$table}'" ) === $table ) {
+						$logs = $wpdb->get_results(
+							"SELECT id, logger, level, message, initiator, context, data, date FROM {$table} WHERE logger LIKE '%User%' OR logger LIKE '%Login%' ORDER BY date DESC LIMIT 100"
+						);
+						foreach ( (array) $logs as $row ) {
+							$context_data = maybe_unserialize( $row->context );
+							$out[] = array(
+								'id'        => $row->id,
+								'logger'    => $row->logger,
+								'message'   => $row->message,
+								'initiator' => $row->initiator,
+								'email'     => isset( $context_data['_user_email'] ) ? $context_data['_user_email'] : '',
+								'login'     => isset( $context_data['_user_login'] ) ? $context_data['_user_login'] : '',
+								'date'      => $row->date,
+							);
+						}
+					}
+				}
+
+				if ( empty( $out ) ) {
+					$table = $wpdb->prefix . 'wsal_occurrences';
+					if ( $wpdb->get_var( "SHOW TABLES LIKE '{$table}'" ) === $table ) {
+						$logs = $wpdb->get_results(
+							"SELECT id, site_id, alert_id, created_on FROM {$table} ORDER BY created_on DESC LIMIT 100"
+						);
+						foreach ( (array) $logs as $row ) {
+							$out[] = array(
+								'id'       => $row->id,
+								'alert_id' => $row->alert_id,
+								'date'     => $row->created_on,
+							);
+						}
+					}
+				}
+
+				if ( empty( $out ) ) {
+					$users = get_users( array( 'number' => 50, 'orderby' => 'user_registered', 'order' => 'DESC' ) );
+					foreach ( $users as $u ) {
+						$last_login = get_user_meta( $u->ID, 'last_login', true );
+						$out[] = array(
+							'login'         => $u->user_login,
+							'email'         => $u->user_email,
+							'display_name'  => $u->display_name,
+							'role'          => implode( ', ', $u->roles ),
+							'registered'    => $u->user_registered,
+							'last_login'    => $last_login ? $last_login : '',
+						);
+					}
+				}
+
+				return $out;
+			}
+			if ( strpos( $i, 'ip tracking' ) !== false ) {
+				global $wpdb;
+				$out = array();
+
+				if ( defined( 'WORDFENCE_VERSION' ) ) {
+					$table = $wpdb->prefix . 'wfHits';
+					if ( $wpdb->get_var( "SHOW TABLES LIKE '{$table}'" ) === $table ) {
+						$hits = $wpdb->get_results(
+							"SELECT id, IP, ctime, statusCode, isLogin, username FROM {$table} ORDER BY ctime DESC LIMIT 50"
+						);
+						foreach ( (array) $hits as $row ) {
+							$out[] = array(
+								'id'         => $row->id,
+								'ip'         => $row->IP,
+								'time'       => $row->ctime ? gmdate( 'c', (int) $row->ctime ) : '',
+								'status'     => $row->statusCode,
+								'is_login'   => $row->isLogin ? 'Yes' : 'No',
+								'username'   => $row->username,
+							);
+						}
+					}
+				}
+
+				if ( empty( $out ) && defined( 'SIMPLE_HISTORY_VERSION' ) ) {
+					$table = $wpdb->prefix . 'simple_history';
+					if ( $wpdb->get_var( "SHOW TABLES LIKE '{$table}'" ) === $table ) {
+						$logs = $wpdb->get_results(
+							"SELECT id, logger, message, data, date FROM {$table} WHERE logger LIKE '%IP%' OR logger LIKE '%Security%' ORDER BY date DESC LIMIT 50"
+						);
+						foreach ( (array) $logs as $row ) {
+							$out[] = array(
+								'id'      => $row->id,
+								'logger'  => $row->logger,
+								'message' => $row->message,
+								'date'    => $row->date,
+							);
+						}
+					}
+				}
+
+				if ( empty( $out ) ) {
+					$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+					$ua = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+					$out[] = array(
+						'current_ip'         => $ip,
+						'user_agent'         => $ua,
+						'request_time'       => current_time( 'mysql' ),
+						'logged_in_users'    => count_users()['total_users'] . ' registered users',
+						'ip_logging_plugins' => defined( 'WORDFENCE_VERSION' ) ? 'Wordfence active' : ( defined( 'SUCURISCAN_VERSION' ) ? 'Sucuri active' : 'No dedicated IP logging plugin detected' ),
+					);
+				}
+
+				return $out;
+			}
+			if ( strpos( $i, 'admin actions' ) !== false ) {
+				global $wpdb;
+				$out = array();
+
+				if ( defined( 'SIMPLE_HISTORY_VERSION' ) ) {
+					$table = $wpdb->prefix . 'simple_history';
+					if ( $wpdb->get_var( "SHOW TABLES LIKE '{$table}'" ) === $table ) {
+						$logs = $wpdb->get_results(
+							"SELECT id, logger, level, message, initiator, date FROM {$table} ORDER BY date DESC LIMIT 50"
+						);
+						foreach ( (array) $logs as $row ) {
+							$out[] = array(
+								'id'        => $row->id,
+								'logger'    => $row->logger,
+								'level'     => $row->level,
+								'message'   => $row->message,
+								'initiator' => $row->initiator,
+								'date'      => $row->date,
+							);
+						}
+					}
+				}
+
+				if ( empty( $out ) ) {
+					$table = $wpdb->prefix . 'wsal_occurrences';
+					if ( $wpdb->get_var( "SHOW TABLES LIKE '{$table}'" ) === $table ) {
+						$logs = $wpdb->get_results(
+							"SELECT id, alert_id, created_on FROM {$table} ORDER BY created_on DESC LIMIT 50"
+						);
+						foreach ( (array) $logs as $row ) {
+							$out[] = array(
+								'id'       => $row->id,
+								'alert_id' => $row->alert_id,
+								'date'     => $row->created_on,
+							);
+						}
+					}
+				}
+
+				if ( empty( $out ) ) {
+					$admin_log = get_option( 'w91099ch_admin_action_log', array() );
+					if ( is_array( $admin_log ) && ! empty( $admin_log ) ) {
+						foreach ( array_slice( $admin_log, 0, 50 ) as $entry ) {
+							$out[] = $entry;
+						}
+					} else {
+						$current_user = wp_get_current_user();
+						$out[] = array(
+							'current_user'    => $current_user ? $current_user->user_login : '',
+							'current_role'    => $current_user && isset( $current_user->roles ) ? implode( ', ', $current_user->roles ) : '',
+							'admin_url'       => admin_url(),
+							'admin_actions'   => 'Admin action logging ' . ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ? 'enabled (WP_DEBUG_LOG)' : 'uses standard WordPress logging' ),
+							'recent_actions'  => 'No installed admin activity plugin detected. Install Simple History or WP Activity Log for detailed tracking.',
+						);
+					}
+				}
+
+				return $out;
+			}
+			if ( strpos( $i, 'file modification' ) !== false ) {
+				global $wpdb;
+				$out = array();
+
+				if ( defined( 'SIMPLE_HISTORY_VERSION' ) ) {
+					$table = $wpdb->prefix . 'simple_history';
+					if ( $wpdb->get_var( "SHOW TABLES LIKE '{$table}'" ) === $table ) {
+						$logs = $wpdb->get_results(
+							"SELECT id, logger, message, date FROM {$table} WHERE message LIKE '%file%' OR message LIKE '%upload%' ORDER BY date DESC LIMIT 30"
+						);
+						foreach ( (array) $logs as $row ) {
+							$out[] = array(
+								'id'      => $row->id,
+								'logger'  => $row->logger,
+								'message' => $row->message,
+								'date'    => $row->date,
+							);
+						}
+					}
+				}
+
+				if ( empty( $out ) ) {
+					$file_mods = defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS ? 'DISABLED' : 'ENABLED';
+					$auto_updates = function_exists( 'wp_get_auto_update_core' ) && wp_get_auto_update_core() ? 'auto-updates enabled' : 'auto-updates disabled';
+					$theme = wp_get_theme();
+					$out[] = array(
+						'file_modifications' => $file_mods,
+						'auto_updates'       => $auto_updates,
+						'active_theme'       => $theme->get( 'Name' ) . ' v' . $theme->get( 'Version' ),
+						'core_checksums'     => function_exists( 'wp_check_php_version' ) ? 'Available' : 'Not available',
+					);
+				}
+
+				return $out;
+			}
+			if ( strpos( $i, 'security events' ) !== false ) {
+				global $wpdb;
+				$out = array();
+
+				if ( defined( 'WORDFENCE_VERSION' ) ) {
+					$block_table = $wpdb->prefix . 'wfBlockedIPs';
+					$blocked = 0;
+					if ( $wpdb->get_var( "SHOW TABLES LIKE '{$block_table}'" ) === $block_table ) {
+						$blocked = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$block_table}" );
+					}
+					$out[] = array(
+						'plugin'          => 'Wordfence v' . WORDFENCE_VERSION,
+						'blocked_ips'     => $blocked,
+						'firewall_active' => defined( 'WFWAF_ENABLED' ) && WFWAF_ENABLED ? 'Yes' : 'No',
+					);
+					$log_table = $wpdb->prefix . 'wflogins';
+					if ( $wpdb->get_var( "SHOW TABLES LIKE '{$log_table}'" ) === $log_table ) {
+						$failed = $wpdb->get_var( "SELECT COUNT(*) FROM {$log_table} WHERE success = 0" );
+						$out[0]['failed_logins'] = (int) $failed;
+					}
+				}
+
+				if ( defined( 'SUCURISCAN_VERSION' ) ) {
+					$out[] = array(
+						'plugin'    => 'Sucuri v' . SUCURISCAN_VERSION,
+						'audit_log' => 'Sucuri audit logging active',
+					);
+				}
+
+				if ( empty( $out ) ) {
+					$out[] = array(
+						'security_plugins'   => 'No dedicated security plugin detected',
+						'force_ssl_admin'    => defined( 'FORCE_SSL_ADMIN' ) && FORCE_SSL_ADMIN ? 'Yes' : 'No',
+						'wp_debug'           => defined( 'WP_DEBUG' ) && WP_DEBUG ? 'Enabled' : 'Disabled',
+						'disallow_file_mods' => defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS ? 'Yes' : 'No',
+					);
+				}
+
+				return $out;
+			}
+		}
+
+		return array();
+	}
+
+	private function collect_payments_item( $group, $item ) {
+		$g = strtolower( trim( $group ) );
+		$i = strtolower( trim( $item ) );
+
+		if ( strpos( $g, 'api keys' ) !== false ) {
+			if ( strpos( $i, 'erp' ) !== false ) {
+				$erp = array();
+				if ( class_exists( 'WooCommerce' ) && defined( 'WC_ERP_VERSION' ) ) { $erp[] = 'WC ERP v' . WC_ERP_VERSION; }
+				if ( defined( 'WPERP_VERSION' ) ) { $erp[] = 'WP ERP v' . WPERP_VERSION; }
+				return ! empty( $erp ) ? implode( ', ', $erp ) : 'No ERP plugin detected';
+			}
+			if ( strpos( $i, 'shipping carrier' ) !== false ) {
+				$carriers = array();
+				if ( function_exists( 'WC' ) ) {
+					$shipping_methods = WC()->shipping()->get_shipping_methods();
+					foreach ( $shipping_methods as $method ) {
+						$carriers[] = $method->method_title;
+					}
+				}
+				return ! empty( $carriers ) ? implode( ', ', $carriers ) : 'Standard shipping methods';
+			}
+			if ( strpos( $i, 'external tool' ) !== false ) {
+				$tools = array();
+				if ( defined( 'WC_STRIPE_VERSION' ) ) { $tools[] = 'Stripe'; }
+				if ( defined( 'WC_PAYPAL_VERSION' ) ) { $tools[] = 'PayPal'; }
+				return ! empty( $tools ) ? implode( ', ', $tools ) : 'Standard payment gateways';
+			}
+		}
+
+		if ( strpos( $g, 'webhooks' ) !== false ) {
+			if ( strpos( $i, 'webhook urls' ) !== false ) {
+				$current_url = (string) get_option( 'w91099ch_webhook_url', '' );
+				return $current_url ? $current_url : 'Not configured';
+			}
+			if ( strpos( $i, 'event triggers' ) !== false ) {
+				$events = array();
+				if ( function_exists( 'WC' ) ) {
+					$wc_events = array( 'order.created', 'order.updated', 'product.created', 'customer.created' );
+					$events = $wc_events;
+				}
+				return ! empty( $events ) ? implode( ', ', $events ) : 'Standard WordPress events';
+			}
+			if ( strpos( $i, 'delivery endpoints' ) !== false ) {
+				$endpoints = array();
+				if ( function_exists( 'WC' ) ) {
+					$data_store = WC_Data_Store::load( 'webhook' );
+					if ( method_exists( $data_store, 'get_webhooks' ) ) {
+						$webhooks = $data_store->get_webhooks( array(), 'objects' );
+						foreach ( $webhooks as $wh ) {
+							$endpoints[] = $wh->get_delivery_url();
+						}
+					}
+				}
+				return ! empty( $endpoints ) ? implode( ', ', $endpoints ) : 'No webhooks configured';
+			}
+		}
+
+		if ( strpos( $g, 'payment logs' ) !== false ) {
+			if ( strpos( $i, 'stripe' ) !== false ) {
+				$stripe = array();
+				if ( defined( 'WC_STRIPE_VERSION' ) ) {
+					$stripe[] = 'WooCommerce Stripe v' . WC_STRIPE_VERSION;
+					global $wpdb;
+					$order_ids = $wpdb->get_col(
+						"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_stripe_source_id' OR meta_key = '_stripe_intent_id' ORDER BY post_id DESC LIMIT 20"
+					);
+					foreach ( (array) $order_ids as $pid ) {
+						$order = wc_get_order( $pid );
+						if ( $order ) {
+							$stripe[] = array(
+								'order_id' => $pid,
+								'total'    => $order->get_total(),
+								'status'   => $order->get_status(),
+								'date'     => $order->get_date_created() ? $order->get_date_created()->format( 'c' ) : '',
+								'currency' => $order->get_currency(),
+								'billing'  => $order->get_billing_email(),
+							);
+						}
+					}
+					if ( empty( $order_ids ) ) {
+						$orders = wc_get_orders( array( 'limit' => 10, 'orderby' => 'date', 'order' => 'DESC', 'payment_method' => 'stripe' ) );
+						foreach ( $orders as $order ) {
+							$stripe[] = array(
+								'order_id' => $order->get_id(),
+								'total'    => $order->get_total(),
+								'status'   => $order->get_status(),
+								'date'     => $order->get_date_created() ? $order->get_date_created()->format( 'c' ) : '',
+								'currency' => $order->get_currency(),
+								'billing'  => $order->get_billing_email(),
+							);
+						}
+					}
+				}
+				return $stripe;
+			}
+			if ( strpos( $i, 'paypal' ) !== false ) {
+				$pp = array();
+				if ( defined( 'WC_PAYPAL_VERSION' ) ) {
+					$pp[] = 'WooCommerce PayPal v' . WC_PAYPAL_VERSION;
+					global $wpdb;
+					$order_ids = $wpdb->get_col(
+						"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_paypal_payment_id' OR meta_key = '_paypal_transaction_id' ORDER BY post_id DESC LIMIT 20"
+					);
+					foreach ( (array) $order_ids as $pid ) {
+						$order = wc_get_order( $pid );
+						if ( $order ) {
+							$txn_id = $order->get_transaction_id();
+							$pp[] = array(
+								'order_id'       => $pid,
+								'total'          => $order->get_total(),
+								'status'         => $order->get_status(),
+								'date'           => $order->get_date_created() ? $order->get_date_created()->format( 'c' ) : '',
+								'transaction_id' => $txn_id ? $txn_id : '',
+								'currency'       => $order->get_currency(),
+								'billing'        => $order->get_billing_email(),
+							);
+						}
+					}
+					if ( empty( $order_ids ) ) {
+						$orders = wc_get_orders( array( 'limit' => 10, 'orderby' => 'date', 'order' => 'DESC', 'payment_method' => 'paypal' ) );
+						foreach ( $orders as $order ) {
+							$txn_id = $order->get_transaction_id();
+							$pp[] = array(
+								'order_id'       => $order->get_id(),
+								'total'          => $order->get_total(),
+								'status'         => $order->get_status(),
+								'date'           => $order->get_date_created() ? $order->get_date_created()->format( 'c' ) : '',
+								'transaction_id' => $txn_id ? $txn_id : '',
+								'currency'       => $order->get_currency(),
+								'billing'        => $order->get_billing_email(),
+							);
+						}
+					}
+				}
+				return $pp;
+			}
+			if ( strpos( $i, 'transaction debug' ) !== false ) {
+				global $wpdb;
+				$logs = array();
+				if ( function_exists( 'WC' ) ) {
+					$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}woocommerce_log WHERE source LIKE '%payment%' OR source LIKE '%stripe%' OR source LIKE '%paypal%' LIMIT 1000" );
+					$logs[] = array(
+						'total_entries' => $count . ' payment-related log entries',
+						'db_table'      => $wpdb->prefix . 'woocommerce_log',
+					);
+					$recent = $wpdb->get_results(
+						"SELECT log_id, timestamp, level, source, message FROM {$wpdb->prefix}woocommerce_log WHERE source LIKE '%payment%' OR source LIKE '%stripe%' OR source LIKE '%paypal%' ORDER BY log_id DESC LIMIT 20"
+					);
+					foreach ( (array) $recent as $row ) {
+						$logs[] = array(
+							'id'        => $row->log_id,
+							'timestamp' => $row->timestamp,
+							'level'     => $row->level,
+							'source'    => $row->source,
+							'message'   => substr( $row->message, 0, 200 ),
+						);
+					}
+				}
+				if ( empty( $logs ) ) {
+					$logs[] = array( 'status' => 'Transaction logging available but no WooCommerce payment logs found' );
+				}
+				return $logs;
+			}
+		}
+
+		return array();
 	}
 
 	public function ajax_sync_affiliates() {
@@ -2076,19 +3715,25 @@ class w91099ch_Core {
 					$timeout = 15;
 				}
 
+				$invite_body = wp_json_encode( $payload );
+				$signature   = $this->get_powerly_signature( $invite_body );
+				$headers     = array(
+					'Authorization'   => 'Bearer ' . $access_token,
+					'Content-Type'    => 'application/json',
+					'Accept'          => 'application/json',
+					'User-Agent'      => 'w9-1099-chaser-WordPress/1.0',
+					'Referer'         => get_site_url(),
+					'Origin'          => wp_parse_url( get_site_url(), PHP_URL_HOST ),
+					'Idempotency-Key' => hash( 'sha256', $api_url . '|POST|' . wp_json_encode( $payload ) . '|' . (string) get_site_url() ),
+				);
+				if ( '' !== $signature ) {
+					$headers['X-Powerly-Signature'] = $signature;
+				}
 				$response = wp_remote_post(
 					$api_url,
 					array(
-						'headers'     => array(
-							'Authorization'   => 'Bearer ' . $access_token,
-							'Content-Type'    => 'application/json',
-							'Accept'          => 'application/json',
-							'User-Agent'      => 'w9-1099-chaser-WordPress/1.0',
-							'Referer'         => get_site_url(),
-							'Origin'          => wp_parse_url( get_site_url(), PHP_URL_HOST ),
-							'Idempotency-Key' => hash( 'sha256', $api_url . '|POST|' . wp_json_encode( $payload ) . '|' . (string) get_site_url() ),
-						),
-						'body'        => wp_json_encode( $payload ),
+						'headers'     => $headers,
+						'body'        => $invite_body,
 						'timeout'     => $timeout,
 						'sslverify'   => (bool) $sslverify,
 						'redirection' => 2,
@@ -2220,25 +3865,38 @@ class w91099ch_Core {
 		try {
 			$payload = $this->build_sync_all_payload();
 
-			$webhook_status = array();
-			$events = array(
-				'plugin_data_synced',
-				'affiliates_synced',
-				'team_members_synced',
-				'form_plugins_synced',
-				'membership_plugins_synced',
-				'contractor_plugins_synced',
-				'freelancer_contractor_plugins_synced',
-				'accounting_plugins_synced',
-				'accounting_bookkeeping_plugins_synced',
-				'payout_plugins_synced',
-				'wallet_payout_plugins_synced',
-				'ecommerce_plugins_synced',
+			$common_fields = array(
+				'event_id'    => isset( $payload['event_id'] ) ? $payload['event_id'] : 'wp_' . uniqid( '', true ),
+				'timestamp'   => gmdate( 'c' ),
+				'site_url'    => (string) get_site_url(),
+				'site_name'   => (string) get_bloginfo( 'name' ),
+				'admin_email' => sanitize_email( (string) get_option( 'admin_email', '' ) ),
 			);
 
-			foreach ( $events as $event_type ) {
+			$event_payloads = array(
+				'plugin_data_synced'             => $payload,
+				'affiliates_synced'              => array_merge( $common_fields, array( 'affiliates_data' => $payload['affiliates_data'], 'payout_data' => $payload['payout_data'] ) ),
+				'team_members_synced'            => array_merge( $common_fields, array( 'team' => $payload['team'] ) ),
+				'form_plugins_synced'            => array_merge( $common_fields, array( 'forms_plugin' => $payload['forms_plugin'] ) ),
+				'membership_plugins_synced'      => array_merge( $common_fields, array( 'membership_data' => $payload['membership_data'] ) ),
+				'contractor_plugins_synced'      => array_merge( $common_fields, array( 'affiliates_data' => $payload['affiliates_data'] ) ),
+				'freelancer_contractor_plugins_synced' => array_merge( $common_fields, array( 'affiliates_data' => $payload['affiliates_data'] ) ),
+				'accounting_plugins_synced'      => array_merge( $common_fields, array( 'accounting_data' => $payload['accounting_data'] ) ),
+				'accounting_bookkeeping_plugins_synced' => array_merge( $common_fields, array( 'accounting_data' => $payload['accounting_data'] ) ),
+				'payout_plugins_synced'          => array_merge( $common_fields, array( 'payout_data' => $payload['payout_data'] ) ),
+				'wallet_payout_plugins_synced'   => array_merge( $common_fields, array( 'payout_data' => $payload['payout_data'] ) ),
+				'ecommerce_plugins_synced'       => array_merge( $common_fields, array( 'ecommerce_data' => $payload['ecommerce_data'] ) ),
+				'website_content_synced'         => array_merge( $common_fields, array( 'Website Content' => $payload['website_content'] ) ),
+				'analytics_synced'               => array_merge( $common_fields, array( 'Analytics & Customer Relationship' => $payload['analytics'] ) ),
+				'system_config_synced'           => array_merge( $common_fields, array( 'System Configuration & Design Sync' => $payload['system_config'] ) ),
+				'security_access_synced'         => array_merge( $common_fields, array( 'User Security & System Access Sync' => $payload['security_access'] ) ),
+				'payments_synced'                => array_merge( $common_fields, array( 'Payment Gateway & Third-Party Integrations Sync' => $payload['payments_integrations'] ) ),
+			);
+
+			$webhook_status = array();
+			foreach ( $event_payloads as $event_type => $event_payload ) {
 				$webhook_status[ $event_type ] = w91099ch_Webhook_Dispatcher::dispatch_raw_payload(
-					$payload,
+					$event_payload,
 					$event_type
 				);
 			}
@@ -2252,15 +3910,11 @@ class w91099ch_Core {
 			);
 		} catch ( Throwable $e ) {
 			$this->log( 'Sync-all webhook error: ' . $e->getMessage() );
-			wp_send_json_error( esc_html__( 'Sync-all webhook failed. Please retry.', 'w9-1099-chaser' ) );
+			wp_send_json_error( esc_html__( 'Sync-all webhook failed: ', 'w9-1099-chaser' ) . $e->getMessage() );
 		}
 	}
 
 	private function build_sync_all_payload() {
-		if ( function_exists( 'w91099ch_build_full_webhook_payload' ) ) {
-			return w91099ch_build_full_webhook_payload( 'plugin_data_synced', array() );
-		}
-
 		$event_id = 'wp_' . preg_replace( '/[^a-zA-Z0-9_]/', '', uniqid( '', true ) );
 
 		$user_profile = array();
@@ -2431,36 +4085,200 @@ class w91099ch_Core {
 			}
 		}
 
+		$website_content_groups = array(
+			'Standard Pages & Posts' => array( 'Homepage', 'Privacy Policy', 'Blog Posts', 'Publishing Dates', 'Authors', 'SEO Metadata' ),
+			'Media Library'          => array( 'Images (original files)', 'Product Gallery Photos', 'PDFs / Downloads', 'Videos', 'Alt Text Data' ),
+			'Comments & Reviews'     => array( 'Reviewer Names', 'Emails', 'Star Ratings', 'Comment Text', 'Approval Status', 'Timestamps' ),
+			'Categories & Tags'      => array( 'Product Categories', 'Blog Categories', 'Tags', 'Hierarchical Structure', 'URL Slugs' ),
+		);
+		$website_content_data = array();
+		foreach ( $website_content_groups as $group => $items ) {
+			foreach ( $items as $item ) {
+				$val = $this->collect_website_content_item( $group, $item );
+				$website_content_data[ $item ] = $this->stringify_sync_value( $val );
+			}
+		}
+
+		$analytics_groups = array(
+			'Analytics Reports'    => array( 'Gross Sales', 'Net Sales', 'Refund Totals', 'Total Orders', 'Product Quantity Sales' ),
+			'Tax & Shipping Setup' => array( 'Tax Rates (State/Zip)', 'Shipping Zones', 'Shipping Class Rules', 'Flat Rate Pricing' ),
+			'Customer Behavior'    => array( 'Wishlist Data', 'Abandoned Carts', 'Cart Emails', 'Cart Items', 'Checkout Timestamps' ),
+		);
+		$analytics_data = array();
+		foreach ( $analytics_groups as $group => $items ) {
+			foreach ( $items as $item ) {
+				$val = $this->collect_analytics_item( $group, $item );
+				$analytics_data[ $item ] = $this->stringify_sync_value( $val );
+			}
+		}
+
+		$system_config_groups = array(
+			'WordPress Settings' => array( 'Site Title', 'Tagline', 'Permalinks', 'Timezone', 'Reading/Writing Settings' ),
+			'Plugin Settings'    => array( 'SEO Configurations', 'Cache Settings', 'Form Plugin Config', 'Security Plugin Settings', 'JSON Export Settings' ),
+			'Theme Customizer'   => array( 'Layout Settings', 'Color Schemes', 'Typography', 'Widget Layouts' ),
+			'Database Structure' => array( 'wp_posts', 'wp_options', 'wp_postmeta', 'Custom SQL Tables' ),
+		);
+		$system_config_data = array();
+		foreach ( $system_config_groups as $group => $items ) {
+			foreach ( $items as $item ) {
+				$val = $this->collect_system_config_item( $group, $item );
+				$system_config_data[ $item ] = $this->stringify_sync_value( $val );
+			}
+		}
+
+		$security_groups = array(
+			'User Accounts' => array( 'User Profiles', 'Roles (Admin, Shop Manager, Customer)', 'Account Meta Fields', 'Encrypted Password Hashes' ),
+			'Activity Logs' => array( 'Login History', 'IP Tracking Logs', 'Admin Actions', 'File Modification Logs', 'Security Events' ),
+		);
+		$security_data = array();
+		foreach ( $security_groups as $group => $items ) {
+			foreach ( $items as $item ) {
+				$val = $this->collect_security_access_item( $group, $item );
+				$security_data[ $item ] = $this->stringify_sync_value( $val );
+			}
+		}
+
+		$payments_groups = array(
+			'API Keys'     => array( 'ERP System Keys', 'Shipping Carrier Keys', 'External Tool Keys' ),
+			'Webhooks'     => array( 'Webhook URLs', 'Event Triggers', 'Delivery Endpoints' ),
+			'Payment Logs' => array( 'Stripe Logs', 'PayPal Logs', 'Transaction Debug Logs' ),
+		);
+		$payments_data = array();
+		foreach ( $payments_groups as $group => $items ) {
+			foreach ( $items as $item ) {
+				$val = $this->collect_payments_item( $group, $item );
+				$payments_data[ $item ] = $this->stringify_sync_value( $val );
+			}
+		}
+
+		$ecommerce_data = array();
+		try {
+			if ( ! class_exists( 'w91099ch_Ecommerce_Plugin_Detector' ) ) {
+				require_once w91099ch_PLUGIN_PATH . 'includes/ecommerce-plugin-detector-init.php';
+			}
+			$detector = new w91099ch_Ecommerce_Plugin_Detector();
+			$detected_plugins = $detector->get_ecommerce_plugins_data();
+			$ecommerce_settings = get_option( 'w91099ch_ecommerce_data_settings', array() );
+			if ( ! is_array( $ecommerce_settings ) ) {
+				$ecommerce_settings = array();
+			}
+
+			$ecommerce_field_labels = array(
+				'orders'        => 'Orders',
+				'customers'     => 'Customers',
+				'products'      => 'Products',
+				'payments'      => 'Payments',
+				'refunds'       => 'Refunds',
+				'coupons'       => 'Coupons',
+				'subscriptions' => 'Subscriptions',
+				'payouts'       => 'Payouts',
+				'vendors'       => 'Vendors',
+			);
+
+			$ecommerce_all_plugins = array(
+				'woocommerce' => array(
+					'label'  => 'WooCommerce',
+					'fields' => array( 'orders', 'customers', 'products', 'payments', 'refunds', 'coupons', 'subscriptions', 'payouts', 'vendors' ),
+				),
+				'dokan'       => array(
+					'label'  => 'Dokan',
+					'fields' => array( 'vendors', 'orders', 'customers', 'products', 'payouts', 'refunds' ),
+				),
+				'wcfm'        => array(
+					'label'  => 'WCFM',
+					'fields' => array( 'vendors', 'orders', 'customers', 'products', 'payouts', 'refunds' ),
+				),
+				'stripe'      => array(
+					'label'  => 'Stripe',
+					'fields' => array( 'payments', 'refunds', 'payouts' ),
+				),
+				'paypal'      => array(
+					'label'  => 'PayPal',
+					'fields' => array( 'payments', 'refunds', 'payouts' ),
+				),
+			);
+
+			$ec_defaults = $this->get_ecommerce_sync_defaults();
+			foreach ( $ecommerce_all_plugins as $ec_slug => $ec_def ) {
+				$ec_slug = sanitize_key( (string) $ec_slug );
+				if ( '' === $ec_slug ) {
+					continue;
+				}
+				$ec_meta   = isset( $detected_plugins[ $ec_slug ] ) ? $detected_plugins[ $ec_slug ] : array();
+				$ec_cfg    = isset( $ecommerce_settings[ $ec_slug ] ) && is_array( $ecommerce_settings[ $ec_slug ] ) ? $ecommerce_settings[ $ec_slug ] : array();
+				$ec_fields = ( isset( $ec_cfg['fields'] ) && is_array( $ec_cfg['fields'] ) ) ? $ec_cfg['fields'] : array();
+				$ec_selected = array();
+				foreach ( $ec_def['fields'] as $ec_field ) {
+					$ec_fs = sanitize_key( (string) $ec_field );
+					if ( '' === $ec_fs ) {
+						continue;
+					}
+					if ( isset( $ec_fields[ $ec_fs ] ) && (bool) $ec_fields[ $ec_fs ] ) {
+						$ec_selected[] = $ec_fs;
+					}
+				}
+				$ec_label = sanitize_text_field( (string) ( isset( $ec_meta['name'] ) ? $ec_meta['name'] : $ec_def['label'] ) );
+
+				$ec_datasets = array( 'data' => array(), 'counts' => array(), 'errors' => array() );
+				if ( ! empty( $ec_meta ) ) {
+					$ec_datasets = $this->collect_ecommerce_datasets( $ec_slug, $ec_selected, $ec_defaults );
+				}
+				$ec_data_arr = isset( $ec_datasets['data'] ) && is_array( $ec_datasets['data'] ) ? $ec_datasets['data'] : array();
+
+				$ec_sheet = array();
+				foreach ( $ec_def['fields'] as $ec_field ) {
+					$ec_lbl    = isset( $ecommerce_field_labels[ $ec_field ] ) ? $ecommerce_field_labels[ $ec_field ] : ucfirst( $ec_field );
+					$ec_enabled = in_array( $ec_field, $ec_selected, true );
+					if ( $ec_enabled && ! empty( $ec_meta ) ) {
+						$ec_sheet[ $ec_lbl ] = isset( $ec_data_arr[ $ec_field ] ) ? $ec_data_arr[ $ec_field ] : array();
+					} else {
+						$ec_sheet[ $ec_lbl ] = array();
+					}
+				}
+				$ec_sheet['Include in ecommerce sync'] = array_values( $ec_selected );
+				$ec_sheet['counts'] = isset( $ec_datasets['counts'] ) ? $ec_datasets['counts'] : array();
+				$ecommerce_data[ $ec_label ] = $ec_sheet;
+			}
+		} catch ( Throwable $e ) {
+			$ecommerce_data = array( 'error' => $e->getMessage() );
+		}
+
 		return array(
-			'event_type'      => 'plugin_data_synced',
-			'event_id'        => $event_id,
-			'timestamp'       => gmdate( 'c' ),
-			'site_url'        => (string) get_site_url(),
-			'site_name'       => (string) get_bloginfo( 'name' ),
-			'admin_email'     => sanitize_email( (string) get_option( 'admin_email', '' ) ),
-			'user_profile'    => $user_profile,
-			'plugin_data'     => $plugin_data,
-			'team'            => $team,
-			'forms_plugin'    => array(
+			'event_type'            => 'plugin_data_synced',
+			'event_id'              => $event_id,
+			'timestamp'             => gmdate( 'c' ),
+			'site_url'              => (string) get_site_url(),
+			'site_name'             => (string) get_bloginfo( 'name' ),
+			'admin_email'           => sanitize_email( (string) get_option( 'admin_email', '' ) ),
+			'user_profile'          => $user_profile,
+			'plugin_data'           => $plugin_data,
+			'team'                  => $team,
+			'forms_plugin'          => array(
 				'total_forms'       => 0,
 				'submissions_today' => 0,
 				'active_forms'      => $form_active,
 				'plugins'           => $form_plugins,
 			),
-			'membership_data' => array(
+			'membership_data'       => array(
 				'total_members'         => 0,
 				'active_subscriptions'  => 0,
 				'revenue_this_month'    => 0,
 				'plugins'               => $membership_plugins,
 			),
-			'accounting_data' => array(
+			'accounting_data'       => array(
 				'total_orders'     => 0,
 				'revenue_today'    => 0,
 				'pending_payments' => 0,
 				'plugins'          => $accounting_plugins,
 			),
-			'affiliates_data' => $affiliates_data,
-			'payout_data'     => $payout_records,
+			'affiliates_data'       => $affiliates_data,
+			'payout_data'           => $payout_records,
+			'website_content'       => $website_content_data,
+			'analytics'             => $analytics_data,
+			'system_config'         => $system_config_data,
+			'security_access'       => $security_data,
+			'payments_integrations' => $payments_data,
+			'ecommerce_data'        => $ecommerce_data,
 		);
 	}
 
@@ -2590,6 +4408,11 @@ class w91099ch_Core {
 			status_header( 403 );
 			echo esc_html__( 'Consent required', 'w9-1099-chaser' );
 			exit;
+		}
+
+		$signing_secret = filter_input( INPUT_GET, 'X-Powerly-Signature', FILTER_SANITIZE_FULL_SPECIAL_CHARS );
+		if ( is_string( $signing_secret ) && '' !== $signing_secret ) {
+			update_option( 'w91099ch_powerly_signing_secret', $signing_secret );
 		}
 
 		try {
@@ -2785,6 +4608,14 @@ class w91099ch_Core {
 		if ( $authorization_code ) {
 			if ( ! $this->has_admin_consent() ) {
 				return new WP_Error( 'consent_required', esc_html__( 'Consent required', 'w9-1099-chaser' ), array( 'status' => 403 ) );
+			}
+
+			$signing_secret = '';
+			if ( is_object( $request ) && method_exists( $request, 'get_param' ) ) {
+				$signing_secret = (string) $request->get_param( 'X-Powerly-Signature' );
+			}
+			if ( '' !== $signing_secret ) {
+				update_option( 'w91099ch_powerly_signing_secret', $signing_secret );
 			}
 
 			try {
@@ -3135,14 +4966,9 @@ class w91099ch_Core {
 				delete_option( 'w91099ch_webhook_secret' );
 			}
 
-			// Backward compatibility: only seed master webhook values if user has not configured them yet.
-			$current_master_url = esc_url_raw( (string) get_option( 'w91099ch_master_webhook_url', '' ) );
-			if ( '' === $current_master_url ) {
-				update_option( 'w91099ch_master_webhook_url', $webhook_url );
-			}
-
-			$current_master_secret = sanitize_text_field( (string) get_option( 'w91099ch_master_webhook_secret', '' ) );
-			if ( '' === $current_master_secret && '' !== $webhook_secret ) {
+			// Always update master webhook values to ensure they are in sync with credentials
+			update_option( 'w91099ch_master_webhook_url', $webhook_url );
+			if ( '' !== $webhook_secret ) {
 				update_option( 'w91099ch_master_webhook_secret', $webhook_secret );
 			}
 		}
@@ -3618,19 +5444,25 @@ class w91099ch_Core {
 				$this->log( 'Creating new client: ' . $api_url );
 			}
 
+			$profile_body = wp_json_encode( $profile_data );
+			$signature    = $this->get_powerly_signature( $profile_body );
+			$headers      = array(
+				'Authorization'   => 'Bearer ' . $access_token,
+				'Content-Type'    => 'application/json',
+				'User-Agent'      => 'w9-1099-chaser-WordPress/1.0.0',
+				'Referer'         => get_site_url(),
+				'Origin'          => wp_parse_url( get_site_url(), PHP_URL_HOST ),
+				'Idempotency-Key' => hash( 'sha256', $api_url . '|' . $method . '|' . wp_json_encode( $profile_data ) ),
+			);
+			if ( '' !== $signature ) {
+				$headers['X-Powerly-Signature'] = $signature;
+			}
 			$response = wp_remote_request(
 				$api_url,
 				array(
 					'method'    => $method,
-					'headers'   => array(
-						'Authorization'   => 'Bearer ' . $access_token,
-						'Content-Type'    => 'application/json',
-						'User-Agent'      => 'w9-1099-chaser-WordPress/1.0.0',
-						'Referer'         => get_site_url(),
-						'Origin'          => wp_parse_url( get_site_url(), PHP_URL_HOST ),
-						'Idempotency-Key' => hash( 'sha256', $api_url . '|' . $method . '|' . wp_json_encode( $profile_data ) ),
-					),
-					'body'      => wp_json_encode( $profile_data ),
+					'headers'   => $headers,
+					'body'      => $profile_body,
 					'timeout'   => 10,
 					'sslverify' => true,
 				)
@@ -3859,18 +5691,24 @@ class w91099ch_Core {
 				$timeout = 15;
 			}
 
+			$w9_body   = wp_json_encode( $payload );
+			$signature = $this->get_powerly_signature( $w9_body );
+			$headers   = array(
+				'Authorization'   => 'Bearer ' . $access_token,
+				'Content-Type'    => 'application/json',
+				'User-Agent'      => 'w9-1099-chaser-WordPress/1.0',
+				'Referer'         => get_site_url(),
+				'Origin'          => wp_parse_url( get_site_url(), PHP_URL_HOST ),
+				'Idempotency-Key' => hash( 'sha256', $api_url . '|POST|' . wp_json_encode( $payload ) ),
+			);
+			if ( '' !== $signature ) {
+				$headers['X-Powerly-Signature'] = $signature;
+			}
 			$response = wp_remote_post(
 				$api_url,
 				array(
-					'headers'   => array(
-						'Authorization'   => 'Bearer ' . $access_token,
-						'Content-Type'    => 'application/json',
-						'User-Agent'      => 'w9-1099-chaser-WordPress/1.0',
-						'Referer'         => get_site_url(),
-						'Origin'          => wp_parse_url( get_site_url(), PHP_URL_HOST ),
-						'Idempotency-Key' => hash( 'sha256', $api_url . '|POST|' . wp_json_encode( $payload ) ),
-					),
-					'body'      => wp_json_encode( $payload ),
+					'headers'   => $headers,
+					'body'      => $w9_body,
 					'timeout'   => $timeout,
 					'sslverify' => (bool) $sslverify,
 				)
@@ -5144,15 +6982,21 @@ class w91099ch_Core {
 				'wallet_summary' => $wallet_summary,
 				'sync_timestamp' => time(),
 			);
+			$payout_body = wp_json_encode( $payout_data );
+			$signature   = $this->get_powerly_signature( $payout_body );
+			$payout_headers = array(
+				'Content-Type'  => 'application/json',
+				'Authorization' => 'Bearer ' . $credentials['access_token'],
+			);
+			if ( '' !== $signature ) {
+				$payout_headers['X-Powerly-Signature'] = $signature;
+			}
 			$response = wp_remote_post(
 				$endpoint,
 				array(
 					'timeout' => 15,
-					'headers' => array(
-						'Content-Type' => 'application/json',
-						'Authorization' => 'Bearer ' . $credentials['access_token'],
-					),
-					'body' => wp_json_encode( $payout_data ),
+					'headers' => $payout_headers,
+					'body'    => $payout_body,
 				)
 			);
 			if ( ! is_wp_error( $response ) && $response['response']['code'] >= 200 && $response['response']['code'] < 300 ) {
@@ -5266,5 +7110,13 @@ class w91099ch_Core {
 		} catch ( Throwable $e ) {
 			$this->log( 'Initial auto-sync error: ' . $e->getMessage() );
 		}
+	}
+
+	private function get_powerly_signature( $body ) {
+		$signing_secret = (string) get_option( 'w91099ch_powerly_signing_secret', '' );
+		if ( '' === $signing_secret || '' === $body ) {
+			return '';
+		}
+		return hash_hmac( 'sha256', $body, $signing_secret );
 	}
 }
