@@ -4,7 +4,7 @@ Tags: W9, 1099, affiliate, tax compliance, vendor management, onboarding, contra
 Requires at least: 5.8
 Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 1.0.13
+Stable tag: 1.0.14
 License: GPLv2 or later
 License URI: <a href="https://www.gnu.org/licenses/gpl-2.0.html">https://www.gnu.org/licenses/gpl-2.0.html</a>
 
@@ -696,6 +696,9 @@ Q14: What Google permissions does the plugin need?
 8. Final result
 
 == Changelog ==
+
+= 1.0.14 =
+* New release with updated plugin code and CI/CD workflow improvements.
 
 = 1.0.13 =
 * Fix: Exclude build-wp folder from SVN deployment to prevent commit conflicts.
